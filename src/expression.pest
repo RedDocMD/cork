@@ -1,0 +1,20 @@
+number = { dec | hex | oct | bin }
+dec = { ASCII_DIGIT+ }
+hex = { "0x" ~ ASCII_HEX_DIGIT+ }
+oct = { "0o" ~ ASCII_OCT_DIGIT+ }
+bin = { "0b" ~ ASCII_BIN_DIGIT+ }
+
+op = { "/" | "*" | "+" | "-" }
+
+expr = { beta_expr ~ expr_prime }
+beta_expr = {   "(" ~ expr ~ ")"
+              | "ans"
+              | number
+              | "-" ~ number
+            }
+expr_prime = { op ~ expr ~ expr_prime | "" }
+
+set_directive = @{ "set" ~ (word ~ " ")* ~ word }
+word = { (ASCII_ALPHANUMERIC | "-" | "_")+ }
+
+line = { SOI ~ (expr | set_directive) ~ EOI }
