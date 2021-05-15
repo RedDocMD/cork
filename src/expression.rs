@@ -164,8 +164,38 @@ fn parse_expr_prime(pair: Pair<Rule>) -> Option<(Op, Expr)> {
     }
 }
 
+mod eval {
+    use super::*;
+
+    #[derive(Debug)]
+    pub struct EvalError(String);
+
+    pub fn eval_expr(expr: &Expr) -> Result<i64, EvalError> {
+        match &expr {
+            Expr::Num(num) => Ok(*num),
+            Expr::BinOp(expr) => {
+                let left = eval_expr(expr.left.as_ref())?;
+                let right = eval_expr(expr.right.as_ref())?;
+                match expr.op {
+                    Op::Add => Ok(left + right),
+                    Op::Sub => Ok(left - right),
+                    Op::Mul => Ok(left * right),
+                    Op::Div => {
+                        if right == 0 {
+                            Err(EvalError(String::from("Cannot divide by 0")))
+                        } else {
+                            Ok(left / right)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
+    use super::eval::*;
     use super::*;
 
     #[test]
@@ -192,5 +222,14 @@ mod test {
         });
         let expr_str2 = "2 * (5 + 6)";
         assert_eq!(parse_line(expr_str2).unwrap(), Command::Expr(expr2));
+    }
+
+    #[test]
+    fn test_expr_eval() {
+        let expr1_str = "(5 + 6) * 2";
+        match parse_line(expr1_str).unwrap() {
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr).unwrap(), 22),
+            _ => panic!("Should have parsed to an expr"),
+        };
     }
 }
