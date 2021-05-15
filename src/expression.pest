@@ -8,7 +8,6 @@ op = { "/" | "*" | "+" | "-" }
 
 expr = { beta_expr ~ expr_prime }
 beta_expr = {   "(" ~ expr ~ ")"
-              | "ans"
               | number
               | "-" ~ number
             }
@@ -18,3 +17,5 @@ set_directive = @{ "set" ~ (word ~ " ")* ~ word }
 word = { (ASCII_ALPHANUMERIC | "-" | "_")+ }
 
 line = { SOI ~ (expr | set_directive) ~ EOI }
+
+WHITESPACE = _{ " " }
