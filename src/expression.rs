@@ -5,31 +5,18 @@ use std::{i64, str::FromStr};
 
 #[derive(Parser)]
 #[grammar = "expression.pest"]
-struct CommandrParser;
+struct CommandParser;
 
 /// An Expr is either a node (which corresponds to a binary operation) or a leaf (which corresponds
 /// to a number).
-///
-/// Eg: The expression (5 + 6) * 2 will correspond to:
-/// ```
-/// Expr::BinOp(BinOpExpr {
-///        left: Box::new(Expr::BinOp(BinOpExpr {
-///                left: Box::new(Expr::Num(5)),
-///                right: Box::new(Expr::Num(6)),
-///                op: Op::Add,
-///            })),
-///            right: Box::new(Expr::Num(2)),
-///            op: Op::Mul,
-///        });
-/// ```
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Expr {
     BinOp(BinOpExpr),
     Num(i64),
 }
 
 /// An Op is a binary operator.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Op {
     Add,
     Sub,
@@ -56,15 +43,21 @@ impl FromStr for Op {
 
 /// A BinOpExpr is an expr which has two operands and an operator.
 /// The two operands might also be expressions.
-#[derive(Debug)]
+#[derive(Debug, Eq)]
 pub struct BinOpExpr {
     left: Box<Expr>,
     right: Box<Expr>,
     op: Op,
 }
 
+impl PartialEq for BinOpExpr {
+    fn eq(&self, rhs: &Self) -> bool {
+        *self.left == *rhs.left && *self.right == *rhs.right && self.op == rhs.op
+    }
+}
+
 /// A SetDirective is a command of the form "set [args]+".
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct SetDirective {
     args: Vec<String>,
 }
@@ -72,7 +65,7 @@ pub struct SetDirective {
 /// A Command is a one line worth of input from the user.
 /// It can either be a SetDirective or an Expr.
 /// As an escape-hatch, there is also an empty command.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Command {
     Expr(Expr),
     Set(SetDirective),
@@ -82,16 +75,21 @@ pub enum Command {
 /// parse_line takes in a user input, and parses it to a valid Command
 /// or results in a parse error.
 pub fn parse_line<T: AsRef<str>>(line: T) -> Result<Command, Error<Rule>> {
-    let comm = CommandrParser::parse(Rule::line, line.as_ref())?.next();
+    let comm = CommandParser::parse(Rule::line, line.as_ref())?.next();
     if let None = comm {
         return Ok(Command::Empty);
     }
-    Ok(parse_comm(comm.unwrap()))
+    Ok(parse_comm(comm.unwrap().into_inner().next().unwrap()))
 }
 
 fn parse_comm(pair: Pair<Rule>) -> Command {
+    eprintln!("{:?}", pair.as_rule());
     match pair.as_rule() {
-        Rule::dec => Command::Expr(Expr::Num(pair.as_str().parse().unwrap())),
+        Rule::number => parse_comm(pair.into_inner().next().unwrap()),
+        Rule::dec => {
+            eprintln!("<{}>", pair.as_str());
+            Command::Expr(Expr::Num(pair.as_str().parse().unwrap()))
+        }
         Rule::hex => Command::Expr(Expr::Num(
             i64::from_str_radix(&pair.as_str()[2..], 16).unwrap(),
         )),
@@ -166,22 +164,33 @@ fn parse_expr_prime(pair: Pair<Rule>) -> Option<(Op, Expr)> {
     }
 }
 
-// #[cfg(test)]
-// mod test {
-//     use super::*;
-//
-//     #[test]
-//     fn test_expr_parse() {
-//         let expr1 = Expr::BinOp(BinOpExpr {
-//             left: Box::new(Expr::BinOp(BinOpExpr {
-//                 left: Box::new(Expr::Num(5)),
-//                 right: Box::new(Expr::Num(6)),
-//                 op: Op::Add,
-//             })),
-//             right: Box::new(Expr::Num(2)),
-//             op: Op::Mul,
-//         });
-//         let expr_str1 = "(5 + 6) * 2";
-//         assert_eq!(parse_line(expr_str1).unwrap(), Command::Expr(expr1));
-//     }
-// }
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_expr_parse() {
+        let expr1 = Expr::BinOp(BinOpExpr {
+            left: Box::new(Expr::BinOp(BinOpExpr {
+                left: Box::new(Expr::Num(5)),
+                right: Box::new(Expr::Num(6)),
+                op: Op::Add,
+            })),
+            right: Box::new(Expr::Num(2)),
+            op: Op::Mul,
+        });
+        let expr_str1 = "(5 + 6) * 2";
+        assert_eq!(parse_line(expr_str1).unwrap(), Command::Expr(expr1));
+        let expr2 = Expr::BinOp(BinOpExpr {
+            right: Box::new(Expr::BinOp(BinOpExpr {
+                left: Box::new(Expr::Num(5)),
+                right: Box::new(Expr::Num(6)),
+                op: Op::Add,
+            })),
+            left: Box::new(Expr::Num(2)),
+            op: Op::Mul,
+        });
+        let expr_str2 = "2 * (5 + 6)";
+        assert_eq!(parse_line(expr_str2).unwrap(), Command::Expr(expr2));
+    }
+}
