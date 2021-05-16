@@ -265,6 +265,11 @@ mod test {
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), -3),
             _ => panic!("Should have parsed to an expr"),
         };
+        let expr8_str = "24 / (2 * (12 / 4)) - ((8 * 3) / 6)";
+        match parse_line(expr8_str).unwrap() {
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0),
+            _ => panic!("Should have parsed to an expr"),
+        };
     }
 
     #[test]
