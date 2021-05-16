@@ -1,8 +1,8 @@
 # Cork
 
-![Usage](assets/usage.svg)
 ![version](https://img.shields.io/crates/v/cork)
 ![license](https://img.shields.io/crates/l/cork)
+![Usage](assets/usage.svg)
 
 Cork is a simple command-line calculator, mainly targeted towards people who deal with hex numbers. It deals only with **integer** arithmetic. Expressions may involve mixed bases (limited to *decimal*, *hexadecimal*, *octal* and *binary* numbers). The global output format may be set to a particular radix - by default it is hex.
 
