@@ -1,4 +1,4 @@
-number = { dec | hex | oct | bin }
+number = { hex | oct | bin | dec }
 dec = @{ ASCII_DIGIT+ }
 hex = @{ "0x" ~ ASCII_HEX_DIGIT+ }
 oct = @{ "0o" ~ ASCII_OCT_DIGIT+ }

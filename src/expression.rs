@@ -123,8 +123,16 @@ fn parse_comm(pair: Pair<Rule>) -> Command {
             let mut inner = pair.into_inner();
             let first = inner.next().unwrap();
             let first_str = first.as_str();
-            if first_str == "(" || first_str == "-" {
+            if first_str == "(" {
                 parse_comm(inner.next().unwrap())
+            } else if first_str == "-" {
+                match parse_comm(inner.next().unwrap()) {
+                    Command::Expr(expr) => match expr {
+                        Expr::Num(num) => Command::Expr(Expr::Num(-num)),
+                        _ => unreachable!(),
+                    },
+                    _ => unreachable!(),
+                }
             } else {
                 parse_comm(first)
             }
@@ -243,5 +251,35 @@ mod test {
             Command::Expr(expr) => assert_eq!(eval_expr(&expr).unwrap(), 22),
             _ => panic!("Should have parsed to an expr"),
         };
+    }
+
+    #[test]
+    fn hex_parse() {
+        let hex_str1 = "0x1a";
+        assert_eq!(parse_line(hex_str1).unwrap(), Command::Expr(Expr::Num(26)));
+        let hex_str2 = "0xCAFE";
+        assert_eq!(
+            parse_line(hex_str2).unwrap(),
+            Command::Expr(Expr::Num(51966))
+        );
+    }
+
+    #[test]
+    fn oct_parse() {
+        let oct_str1 = "0o345";
+        assert_eq!(parse_line(oct_str1).unwrap(), Command::Expr(Expr::Num(229)));
+        let oct_str2 = "0o1232344";
+        assert_eq!(
+            parse_line(oct_str2).unwrap(),
+            Command::Expr(Expr::Num(341220))
+        );
+    }
+
+    #[test]
+    fn bin_parse() {
+        let bin_str1 = "0b1010";
+        assert_eq!(parse_line(bin_str1).unwrap(), Command::Expr(Expr::Num(10)));
+        let bin_str1 = "0b10100101";
+        assert_eq!(parse_line(bin_str1).unwrap(), Command::Expr(Expr::Num(165)));
     }
 }
