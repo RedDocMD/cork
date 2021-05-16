@@ -4,15 +4,15 @@ hex = @{ "0x" ~ ASCII_HEX_DIGIT+ }
 oct = @{ "0o" ~ ASCII_OCT_DIGIT+ }
 bin = @{ "0b" ~ ASCII_BIN_DIGIT+ }
 
-op = { "/" | "*" | "+" | "-" }
+operation = _{ add | subtract | multiply | divide | power }
+    add      = { "+" }
+    subtract = { "-" }
+    multiply = { "*" }
+    divide   = { "/" }
+    power    = { "^" }
 
-expr = { beta_expr ~ expr_prime }
-beta_expr = {   "(" ~ expr ~ ")"
-              | number
-              | "-" ~ number
-              | "ans"
-            }
-expr_prime = { op ~ expr ~ expr_prime | "" }
+expr = { term ~ (operation ~ term)* }
+term = _{ "ans" | number | "(" ~ expr ~ ")" }
 
 set_directive = @{ "set " ~ (word ~ " ")* ~ word }
 word = { (ASCII_ALPHANUMERIC | "-" | "_")+ }

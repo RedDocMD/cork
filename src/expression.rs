@@ -1,5 +1,6 @@
 use pest::error::Error;
-use pest::iterators::Pair;
+use pest::iterators::{Pair, Pairs};
+use pest::prec_climber::PrecClimber;
 use pest::Parser;
 use std::fmt;
 use std::i64;
@@ -7,7 +8,7 @@ use std::ops::Index;
 use std::str::FromStr;
 
 #[derive(Parser)]
-#[grammar = "expression.pest"]
+#[grammar = "expression.peg"]
 struct CommandParser;
 
 /// An Expr is either a node (which corresponds to a binary operation) or a leaf (which corresponds
@@ -102,55 +103,7 @@ pub fn parse_line<T: AsRef<str>>(line: T) -> Result<Command, Error<Rule>> {
 
 fn parse_comm(pair: Pair<Rule>) -> Command {
     match pair.as_rule() {
-        Rule::number => parse_comm(pair.into_inner().next().unwrap()),
-        Rule::dec => Command::Expr(Expr::Num(pair.as_str().parse().unwrap())),
-        Rule::hex => Command::Expr(Expr::Num(
-            i64::from_str_radix(&pair.as_str()[2..], 16).unwrap(),
-        )),
-        Rule::oct => Command::Expr(Expr::Num(
-            i64::from_str_radix(&pair.as_str()[2..], 8).unwrap(),
-        )),
-        Rule::bin => Command::Expr(Expr::Num(
-            i64::from_str_radix(&pair.as_str()[2..], 2).unwrap(),
-        )),
-        Rule::expr => {
-            let mut inner = pair.into_inner();
-            if let Command::Expr(left_expr) = parse_comm(inner.next().unwrap()) {
-                if let Some((op, right_expr)) = parse_expr_prime(inner.next().unwrap()) {
-                    Command::Expr(Expr::BinOp(BinOpExpr {
-                        left: Box::new(left_expr),
-                        right: Box::new(right_expr),
-                        op,
-                    }))
-                } else {
-                    Command::Expr(left_expr)
-                }
-            } else {
-                panic!("First part of expr must evaluate to an expr!");
-            }
-        }
-        Rule::beta_expr => {
-            if pair.as_str() == "ans" {
-                Command::Expr(Expr::Ans)
-            } else {
-                let mut inner = pair.into_inner();
-                let first = inner.next().unwrap();
-                let first_str = first.as_str();
-                if first_str == "(" {
-                    parse_comm(inner.next().unwrap())
-                } else if first_str == "-" {
-                    match parse_comm(inner.next().unwrap()) {
-                        Command::Expr(expr) => match expr {
-                            Expr::Num(num) => Command::Expr(Expr::Num(-num)),
-                            _ => unreachable!(),
-                        },
-                        _ => unreachable!(),
-                    }
-                } else {
-                    parse_comm(first)
-                }
-            }
-        }
+        Rule::expr => Command::Expr(parse_expr(pair.into_inner())),
         Rule::set_directive => Command::Set(SetDirective {
             args: pair
                 .as_str()
@@ -163,32 +116,46 @@ fn parse_comm(pair: Pair<Rule>) -> Command {
     }
 }
 
-fn parse_expr_prime(pair: Pair<Rule>) -> Option<(Op, Expr)> {
-    match pair.as_rule() {
-        Rule::expr_prime => {
-            if pair.as_str() == "" {
-                None
-            } else {
-                let mut inner = pair.into_inner();
-                let op: Op = inner.next().unwrap().as_str().parse().unwrap();
-                if let Command::Expr(left_expr) = parse_comm(inner.next().unwrap()) {
-                    if let Some((new_op, right_expr)) = parse_expr_prime(inner.next().unwrap()) {
-                        let expr = Expr::BinOp(BinOpExpr {
-                            left: Box::new(left_expr),
-                            right: Box::new(right_expr),
-                            op: new_op,
-                        });
-                        Some((op, expr))
-                    } else {
-                        Some((op, left_expr))
-                    }
-                } else {
-                    panic!("Second part of expr_prime must be an expr");
-                }
-            }
-        }
-        _ => unreachable!(),
-    }
+lazy_static! {
+    static ref PREC_CLIMBER: PrecClimber<Rule> = {
+        use pest::prec_climber::Assoc::*;
+        use pest::prec_climber::*;
+        use Rule::*;
+
+        PrecClimber::new(vec![
+            Operator::new(add, Left) | Operator::new(subtract, Left),
+            Operator::new(multiply, Left) | Operator::new(divide, Left),
+        ])
+    };
+}
+
+fn parse_expr(expression: Pairs<Rule>) -> Expr {
+    PREC_CLIMBER.climb(
+        expression,
+        |pair: Pair<Rule>| match pair.as_rule() {
+            Rule::number => parse_expr(pair.into_inner()),
+            Rule::dec => Expr::Num(pair.as_str().parse().unwrap()),
+            Rule::hex => Expr::Num(i64::from_str_radix(&pair.as_str()[2..], 16).unwrap()),
+            Rule::oct => Expr::Num(i64::from_str_radix(&pair.as_str()[2..], 8).unwrap()),
+            Rule::bin => Expr::Num(i64::from_str_radix(&pair.as_str()[2..], 2).unwrap()),
+            Rule::expr => parse_expr(pair.into_inner()),
+            _ => unreachable!(),
+        },
+        |lhs: Expr, op: Pair<Rule>, rhs: Expr| {
+            let op = match op.as_rule() {
+                Rule::add => Op::Add,
+                Rule::subtract => Op::Sub,
+                Rule::multiply => Op::Mul,
+                Rule::divide => Op::Div,
+                _ => unreachable!(),
+            };
+            Expr::BinOp(BinOpExpr {
+                left: Box::new(lhs),
+                right: Box::new(rhs),
+                op,
+            })
+        },
+    )
 }
 
 pub mod eval {
@@ -265,6 +232,16 @@ mod test {
         let expr1_str = "(5 + 6) * 2";
         match parse_line(expr1_str).unwrap() {
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 22),
+            _ => panic!("Should have parsed to an expr"),
+        };
+        let expr2_str = "2 * (5 + 6)";
+        match parse_line(expr2_str).unwrap() {
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 22),
+            _ => panic!("Should have parsed to an expr"),
+        };
+        let expr3_str = "3 * (9 + 6) - 4";
+        match parse_line(expr3_str).unwrap() {
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 41),
             _ => panic!("Should have parsed to an expr"),
         };
     }
