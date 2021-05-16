@@ -32,7 +32,7 @@ The binary produced will be `target/release/cork`.
 
 ### From crates.io
 
-To install from [crates.io](https://crates.io), run `cargo install cork`. Then, Cork should be executable with the `cork` command.
+To install from [crates.io](https://crates.io/crates/cork), run `cargo install cork`. Then, Cork should be executable with the `cork` command.
 
 ## Usage
 
