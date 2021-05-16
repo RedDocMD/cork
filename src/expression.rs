@@ -1,7 +1,9 @@
 use pest::error::Error;
 use pest::iterators::Pair;
 use pest::Parser;
-use std::{i64, str::FromStr};
+use std::fmt;
+use std::i64;
+use std::str::FromStr;
 
 #[derive(Parser)]
 #[grammar = "expression.pest"]
@@ -62,6 +64,12 @@ pub struct SetDirective {
     args: Vec<String>,
 }
 
+impl fmt::Display for SetDirective {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "set {}", self.args.join(" "))
+    }
+}
+
 /// A Command is a one line worth of input from the user.
 /// It can either be a SetDirective or an Expr.
 /// As an escape-hatch, there is also an empty command.
@@ -83,13 +91,9 @@ pub fn parse_line<T: AsRef<str>>(line: T) -> Result<Command, Error<Rule>> {
 }
 
 fn parse_comm(pair: Pair<Rule>) -> Command {
-    eprintln!("{:?}", pair.as_rule());
     match pair.as_rule() {
         Rule::number => parse_comm(pair.into_inner().next().unwrap()),
-        Rule::dec => {
-            eprintln!("<{}>", pair.as_str());
-            Command::Expr(Expr::Num(pair.as_str().parse().unwrap()))
-        }
+        Rule::dec => Command::Expr(Expr::Num(pair.as_str().parse().unwrap())),
         Rule::hex => Command::Expr(Expr::Num(
             i64::from_str_radix(&pair.as_str()[2..], 16).unwrap(),
         )),
@@ -164,11 +168,19 @@ fn parse_expr_prime(pair: Pair<Rule>) -> Option<(Op, Expr)> {
     }
 }
 
-mod eval {
+pub mod eval {
+    use std::fmt;
+
     use super::*;
 
     #[derive(Debug)]
     pub struct EvalError(String);
+
+    impl fmt::Display for EvalError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", self.0)
+        }
+    }
 
     pub fn eval_expr(expr: &Expr) -> Result<i64, EvalError> {
         match &expr {
