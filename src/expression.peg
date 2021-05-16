@@ -3,6 +3,7 @@ dec = @{ ASCII_DIGIT+ }
 hex = @{ "0x" ~ ASCII_HEX_DIGIT+ }
 oct = @{ "0o" ~ ASCII_OCT_DIGIT+ }
 bin = @{ "0b" ~ ASCII_BIN_DIGIT+ }
+ans = { "ans" }
 
 operation = _{ add | subtract | multiply | divide | power }
     add      = { "+" }
@@ -12,7 +13,7 @@ operation = _{ add | subtract | multiply | divide | power }
     power    = { "^" }
 
 expr = { term ~ (operation ~ term)* }
-term = _{ "ans" | number | "(" ~ expr ~ ")" }
+term = _{ ans | number | "(" ~ expr ~ ")" }
 
 set_directive = @{ "set " ~ (word ~ " ")* ~ word }
 word = { (ASCII_ALPHANUMERIC | "-" | "_")+ }

@@ -138,6 +138,7 @@ fn parse_expr(expression: Pairs<Rule>) -> Expr {
             Rule::hex => Expr::Num(i64::from_str_radix(&pair.as_str()[2..], 16).unwrap()),
             Rule::oct => Expr::Num(i64::from_str_radix(&pair.as_str()[2..], 8).unwrap()),
             Rule::bin => Expr::Num(i64::from_str_radix(&pair.as_str()[2..], 2).unwrap()),
+            Rule::ans => Expr::Ans,
             Rule::expr => parse_expr(pair.into_inner()),
             _ => unreachable!(),
         },
