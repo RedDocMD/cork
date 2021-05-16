@@ -16,6 +16,7 @@ struct CommandParser;
 pub enum Expr {
     BinOp(BinOpExpr),
     Num(i64),
+    Ans,
 }
 
 /// An Op is a binary operator.
@@ -129,21 +130,25 @@ fn parse_comm(pair: Pair<Rule>) -> Command {
             }
         }
         Rule::beta_expr => {
-            let mut inner = pair.into_inner();
-            let first = inner.next().unwrap();
-            let first_str = first.as_str();
-            if first_str == "(" {
-                parse_comm(inner.next().unwrap())
-            } else if first_str == "-" {
-                match parse_comm(inner.next().unwrap()) {
-                    Command::Expr(expr) => match expr {
-                        Expr::Num(num) => Command::Expr(Expr::Num(-num)),
-                        _ => unreachable!(),
-                    },
-                    _ => unreachable!(),
-                }
+            if pair.as_str() == "ans" {
+                Command::Expr(Expr::Ans)
             } else {
-                parse_comm(first)
+                let mut inner = pair.into_inner();
+                let first = inner.next().unwrap();
+                let first_str = first.as_str();
+                if first_str == "(" {
+                    parse_comm(inner.next().unwrap())
+                } else if first_str == "-" {
+                    match parse_comm(inner.next().unwrap()) {
+                        Command::Expr(expr) => match expr {
+                            Expr::Num(num) => Command::Expr(Expr::Num(-num)),
+                            _ => unreachable!(),
+                        },
+                        _ => unreachable!(),
+                    }
+                } else {
+                    parse_comm(first)
+                }
             }
         }
         Rule::set_directive => Command::Set(SetDirective {
@@ -200,12 +205,12 @@ pub mod eval {
         }
     }
 
-    pub fn eval_expr(expr: &Expr) -> Result<i64, EvalError> {
+    pub fn eval_expr(expr: &Expr, ans: i64) -> Result<i64, EvalError> {
         match &expr {
             Expr::Num(num) => Ok(*num),
             Expr::BinOp(expr) => {
-                let left = eval_expr(expr.left.as_ref())?;
-                let right = eval_expr(expr.right.as_ref())?;
+                let left = eval_expr(expr.left.as_ref(), ans)?;
+                let right = eval_expr(expr.right.as_ref(), ans)?;
                 match expr.op {
                     Op::Add => Ok(left + right),
                     Op::Sub => Ok(left - right),
@@ -219,6 +224,7 @@ pub mod eval {
                     }
                 }
             }
+            Expr::Ans => Ok(ans),
         }
     }
 }
@@ -258,7 +264,7 @@ mod test {
     fn test_expr_eval() {
         let expr1_str = "(5 + 6) * 2";
         match parse_line(expr1_str).unwrap() {
-            Command::Expr(expr) => assert_eq!(eval_expr(&expr).unwrap(), 22),
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 22),
             _ => panic!("Should have parsed to an expr"),
         };
     }

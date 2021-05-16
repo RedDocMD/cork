@@ -10,14 +10,20 @@ mod format;
 fn main() {
     let mut rl = Editor::<()>::new();
     let mut of = format::OutputFormat::default();
+    let mut ans = 0;
     loop {
         match rl.readline("cork> ") {
             Ok(line) => match expression::parse_line(&line) {
                 Ok(command) => match command {
-                    expression::Command::Expr(expr) => match expression::eval::eval_expr(&expr) {
-                        Ok(val) => println!("{}", format::fmt(val, &of)),
-                        Err(err) => eprintln!("Failed to evaluate \"{}\": {}", line, err),
-                    },
+                    expression::Command::Expr(expr) => {
+                        match expression::eval::eval_expr(&expr, ans) {
+                            Ok(val) => {
+                                ans = val;
+                                println!("{}", format::fmt(val, &of));
+                            }
+                            Err(err) => eprintln!("Failed to evaluate \"{}\": {}", line, err),
+                        }
+                    }
                     expression::Command::Set(set) => {
                         if set[0] == "of" {
                             match set[1].as_str() {

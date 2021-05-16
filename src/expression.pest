@@ -10,6 +10,7 @@ expr = { beta_expr ~ expr_prime }
 beta_expr = {   "(" ~ expr ~ ")"
               | number
               | "-" ~ number
+              | "ans"
             }
 expr_prime = { op ~ expr ~ expr_prime | "" }
 
