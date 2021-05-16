@@ -12,6 +12,8 @@ mod expression;
 mod format;
 
 fn main() {
+    welcome();
+
     let mut rl = Editor::<()>::new();
     let history_file_name = PathBuf::from(".cork_history");
     let home_dir = home::home_dir().unwrap_or_else(|| PathBuf::from("."));
@@ -72,4 +74,9 @@ fn main() {
     }
 
     rl.save_history(&history_path).unwrap();
+}
+
+fn welcome() {
+    println!("Welcome to cork - a calculator for hex-lovers!");
+    println!("Press Ctrl + D to exit.");
 }
