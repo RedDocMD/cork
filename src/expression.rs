@@ -3,6 +3,7 @@ use pest::iterators::Pair;
 use pest::Parser;
 use std::fmt;
 use std::i64;
+use std::ops::Index;
 use std::str::FromStr;
 
 #[derive(Parser)]
@@ -67,6 +68,14 @@ pub struct SetDirective {
 impl fmt::Display for SetDirective {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "set {}", self.args.join(" "))
+    }
+}
+
+impl Index<usize> for SetDirective {
+    type Output = String;
+
+    fn index(&self, idx: usize) -> &String {
+        &self.args[idx]
     }
 }
 
@@ -139,9 +148,10 @@ fn parse_comm(pair: Pair<Rule>) -> Command {
         }
         Rule::set_directive => Command::Set(SetDirective {
             args: pair
-                .into_inner()
+                .as_str()
+                .split(" ")
                 .skip(1)
-                .map(|pair| String::from(pair.as_str()))
+                .map(|word| String::from(word))
                 .collect(),
         }),
         _ => unreachable!(),

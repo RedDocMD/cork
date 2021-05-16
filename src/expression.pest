@@ -13,7 +13,7 @@ beta_expr = {   "(" ~ expr ~ ")"
             }
 expr_prime = { op ~ expr ~ expr_prime | "" }
 
-set_directive = @{ "set" ~ (word ~ " ")* ~ word }
+set_directive = @{ "set " ~ (word ~ " ")* ~ word }
 word = { (ASCII_ALPHANUMERIC | "-" | "_")+ }
 
 line = { SOI ~ (expr | set_directive) ~ EOI }
