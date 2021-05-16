@@ -245,6 +245,21 @@ mod test {
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 41),
             _ => panic!("Should have parsed to an expr"),
         };
+        let expr4_str = "6-57*(18+4/73)+38 *  124";
+        match parse_line(expr4_str).unwrap() {
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 3692),
+            _ => panic!("Should have parsed to an expr"),
+        };
+        let expr5_str = "2 + (((7 * 2) - 4) / 2) + 8 * 9 / 4";
+        match parse_line(expr5_str).unwrap() {
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 25),
+            _ => panic!("Should have parsed to an expr"),
+        };
+        let expr6_str = "(3 + 2) - 1 / 1 * 3 + 5 * 4 / 10 - 1";
+        match parse_line(expr6_str).unwrap() {
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 3),
+            _ => panic!("Should have parsed to an expr"),
+        };
     }
 
     #[test]
