@@ -3,8 +3,12 @@ name = "cork"
 version = "0.1.0"
 authors = ["Deep Majumder <deep.majumder2019@gmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "A command-line calculator for hex-lovers."
+license = "GPL-2.0-only"
+repository = "https://github.com/RedDocMD/cork"
+readme = "README.md"
+keywords = ["calculator", "terminal"]
+categories = ["command-line-utilities", "mathematics"]
 
 [dependencies]
 rustyline = "8.0.0"
