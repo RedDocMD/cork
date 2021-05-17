@@ -27,6 +27,7 @@ pub enum Op {
     Sub,
     Mul,
     Div,
+    Rem,
 }
 
 #[derive(Debug)]
@@ -41,6 +42,7 @@ impl FromStr for Op {
             "-" => Ok(Op::Sub),
             "*" => Ok(Op::Mul),
             "/" => Ok(Op::Div),
+            "%" => Ok(Op::Rem),
             _ => Err(ParseOpError(format!("{} is not an Op", s))),
         }
     }
@@ -124,7 +126,7 @@ lazy_static! {
 
         PrecClimber::new(vec![
             Operator::new(add, Left) | Operator::new(subtract, Left),
-            Operator::new(multiply, Left) | Operator::new(divide, Left),
+            Operator::new(multiply, Left) | Operator::new(divide, Left) | Operator::new(rem, Left),
         ])
     };
 }
@@ -148,6 +150,7 @@ fn parse_expr(expression: Pairs<Rule>) -> Expr {
                 Rule::subtract => Op::Sub,
                 Rule::multiply => Op::Mul,
                 Rule::divide => Op::Div,
+                Rule::rem => Op::Rem,
                 _ => unreachable!(),
             };
             Expr::BinOp(BinOpExpr {
@@ -188,6 +191,13 @@ pub mod eval {
                             Err(EvalError(String::from("Cannot divide by 0")))
                         } else {
                             Ok(left / right)
+                        }
+                    }
+                    Op::Rem => {
+                        if right == 0 {
+                            Err(EvalError(String::from("Cannot divide by 0")))
+                        } else {
+                            Ok(left % right)
                         }
                     }
                 }

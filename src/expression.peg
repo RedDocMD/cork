@@ -5,12 +5,12 @@ oct = @{ "0o" ~ ASCII_OCT_DIGIT+ }
 bin = @{ "0b" ~ ASCII_BIN_DIGIT+ }
 ans = { "ans" }
 
-operation = _{ add | subtract | multiply | divide | power }
+operation = _{ add | subtract | multiply | divide | rem }
     add      = { "+" }
     subtract = { "-" }
     multiply = { "*" }
     divide   = { "/" }
-    power    = { "^" }
+    rem      = { "%" }
 
 expr = { term ~ (operation ~ term)* }
 term = _{ ans | number | "(" ~ expr ~ ")" }
