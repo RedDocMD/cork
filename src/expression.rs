@@ -28,6 +28,8 @@ pub enum Op {
     Mul,
     Div,
     Rem,
+    LShift,
+    RShift,
 }
 
 #[derive(Debug)]
@@ -43,6 +45,8 @@ impl FromStr for Op {
             "*" => Ok(Op::Mul),
             "/" => Ok(Op::Div),
             "%" => Ok(Op::Rem),
+            "<<" => Ok(Op::LShift),
+            ">>" => Ok(Op::RShift),
             _ => Err(ParseOpError(format!("{} is not an Op", s))),
         }
     }
@@ -125,6 +129,7 @@ lazy_static! {
         use Rule::*;
 
         PrecClimber::new(vec![
+            Operator::new(lshift, Left) | Operator::new(rshift, Left),
             Operator::new(add, Left) | Operator::new(subtract, Left),
             Operator::new(multiply, Left) | Operator::new(divide, Left) | Operator::new(rem, Left),
         ])
@@ -151,6 +156,8 @@ fn parse_expr(expression: Pairs<Rule>) -> Expr {
                 Rule::multiply => Op::Mul,
                 Rule::divide => Op::Div,
                 Rule::rem => Op::Rem,
+                Rule::lshift => Op::LShift,
+                Rule::rshift => Op::RShift,
                 _ => unreachable!(),
             };
             Expr::BinOp(BinOpExpr {
@@ -186,6 +193,8 @@ pub mod eval {
                     Op::Add => Ok(left + right),
                     Op::Sub => Ok(left - right),
                     Op::Mul => Ok(left * right),
+                    Op::LShift => Ok(left << right),
+                    Op::RShift => Ok(left >> right),
                     Op::Div => {
                         if right == 0 {
                             Err(EvalError(String::from("Cannot divide by 0")))
@@ -278,6 +287,16 @@ mod test {
         let expr8_str = "24 / (2 * (12 / 4)) - ((8 * 3) / 6)";
         match parse_line(expr8_str).unwrap() {
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0),
+            _ => panic!("Should have parsed to an expr"),
+        };
+        let expr9_str = "3 * 512 >> 4 - 2";
+        match parse_line(expr9_str).unwrap() {
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 384),
+            _ => panic!("Should have parsed to an expr"),
+        };
+        let expr10_str = "3 * (512 >> 4) - 2";
+        match parse_line(expr10_str).unwrap() {
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 94),
             _ => panic!("Should have parsed to an expr"),
         };
     }
