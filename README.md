@@ -18,6 +18,10 @@ Cork is a rather odd name for a calculator. I wanted something on the lines of _
 
 ## Installation
 
+### Prebuilt binary
+
+For Linux, you can download a pre-built binary [here](https://github.com/RedDocMD/cork/releases/latest).
+
 ### Build from source
 
 If you have `cargo` installed, then you can build this from source:
