@@ -1,0 +1,32 @@
+name: Release Assets
+
+on:
+  push:
+    tags: 'v*'
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install gitpython termcolor requests
+      - name: Upload Assets
+        run: |
+          python3 .github/workflows/make_release.py target/release/cork $GITHUB_TOKEN
