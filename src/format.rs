@@ -1,3 +1,6 @@
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 pub enum FormatStyle {
     Decimal,
     Hex,
@@ -5,17 +8,25 @@ pub enum FormatStyle {
     Binary,
 }
 
+impl Default for FormatStyle {
+    fn default() -> Self {
+        Self::Hex
+    }
+}
+
 pub struct OutputFormat {
     style: FormatStyle,
 }
 
-impl OutputFormat {
-    pub fn default() -> Self {
+impl Default for OutputFormat {
+    fn default() -> Self {
         Self {
             style: FormatStyle::Hex,
         }
     }
+}
 
+impl OutputFormat {
     pub fn set_format_style(&mut self, f: FormatStyle) {
         self.style = f;
     }
