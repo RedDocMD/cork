@@ -102,7 +102,7 @@ pub enum Command {
 /// or results in a parse error.
 pub fn parse_line<T: AsRef<str>>(line: T) -> Result<Command, Error<Rule>> {
     let comm = CommandParser::parse(Rule::line, line.as_ref())?.next();
-    if let None = comm {
+    if comm.is_none() {
         return Ok(Command::Empty);
     }
     Ok(parse_comm(comm.unwrap().into_inner().next().unwrap()))
@@ -112,12 +112,7 @@ fn parse_comm(pair: Pair<Rule>) -> Command {
     match pair.as_rule() {
         Rule::expr => Command::Expr(parse_expr(pair.into_inner())),
         Rule::set_directive => Command::Set(SetDirective {
-            args: pair
-                .as_str()
-                .split(" ")
-                .skip(1)
-                .map(|word| String::from(word))
-                .collect(),
+            args: pair.as_str().split(' ').skip(1).map(String::from).collect(),
         }),
         _ => unreachable!(),
     }
