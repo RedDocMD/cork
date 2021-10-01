@@ -4,6 +4,7 @@ use pest::prec_climber::PrecClimber;
 use pest::Parser;
 use std::fmt;
 use std::i64;
+use std::num::ParseIntError;
 use std::ops::Index;
 use std::str::FromStr;
 
@@ -136,15 +137,42 @@ lazy_static! {
     };
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Radix {
+    Bin,
+    Oct,
+    Dec,
+    Hex,
+}
+
+impl Radix {
+    fn numeric_radix(&self) -> u32 {
+        match self {
+            Radix::Bin => 2,
+            Radix::Oct => 8,
+            Radix::Dec => 10,
+            Radix::Hex => 16,
+        }
+    }
+}
+
+fn parse_num(mut s: &str, radix: Radix) -> Result<i64, ParseIntError> {
+    if radix != Radix::Dec {
+        s = &s[2..];
+    }
+    let num_str = s.replace('_', "");
+    i64::from_str_radix(&num_str, radix.numeric_radix())
+}
+
 fn parse_expr(expression: Pairs<Rule>) -> Expr {
     PREC_CLIMBER.climb(
         expression,
         |pair: Pair<Rule>| match pair.as_rule() {
             Rule::number => parse_expr(pair.into_inner()),
-            Rule::dec => Expr::Num(pair.as_str().parse().unwrap()),
-            Rule::hex => Expr::Num(i64::from_str_radix(&pair.as_str()[2..], 16).unwrap()),
-            Rule::oct => Expr::Num(i64::from_str_radix(&pair.as_str()[2..], 8).unwrap()),
-            Rule::bin => Expr::Num(i64::from_str_radix(&pair.as_str()[2..], 2).unwrap()),
+            Rule::dec => Expr::Num(parse_num(pair.as_str(), Radix::Dec).unwrap()),
+            Rule::hex => Expr::Num(parse_num(pair.as_str(), Radix::Hex).unwrap()),
+            Rule::oct => Expr::Num(parse_num(pair.as_str(), Radix::Oct).unwrap()),
+            Rule::bin => Expr::Num(parse_num(pair.as_str(), Radix::Bin).unwrap()),
             Rule::ans => Expr::Ans,
             Rule::expr => parse_expr(pair.into_inner()),
             _ => unreachable!(),
@@ -310,6 +338,11 @@ mod test {
             parse_line(hex_str2).unwrap(),
             Command::Expr(Expr::Num(51966))
         );
+        let hex_str3 = "0xFACE_A0CE";
+        assert_eq!(
+            parse_line(hex_str3).unwrap(),
+            Command::Expr(Expr::Num(4207845582))
+        );
     }
 
     #[test]
@@ -321,6 +354,11 @@ mod test {
             parse_line(oct_str2).unwrap(),
             Command::Expr(Expr::Num(341220))
         );
+        let oct_str3 = "0o1232_34_4";
+        assert_eq!(
+            parse_line(oct_str3).unwrap(),
+            Command::Expr(Expr::Num(341220))
+        );
     }
 
     #[test]
@@ -329,5 +367,16 @@ mod test {
         assert_eq!(parse_line(bin_str1).unwrap(), Command::Expr(Expr::Num(10)));
         let bin_str1 = "0b10100101";
         assert_eq!(parse_line(bin_str1).unwrap(), Command::Expr(Expr::Num(165)));
+        let bin_str3 = "0b10_10_01____01";
+        assert_eq!(parse_line(bin_str3).unwrap(), Command::Expr(Expr::Num(165)));
+    }
+
+    #[test]
+    fn dec_parse() {
+        let dec_str1 = "1234_5678";
+        assert_eq!(
+            parse_line(dec_str1).unwrap(),
+            Command::Expr(Expr::Num(12345678))
+        );
     }
 }

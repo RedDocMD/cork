@@ -1,8 +1,8 @@
 number = { hex | oct | bin | dec }
-dec = @{ ASCII_DIGIT+ }
-hex = @{ "0x" ~ ASCII_HEX_DIGIT+ }
-oct = @{ "0o" ~ ASCII_OCT_DIGIT+ }
-bin = @{ "0b" ~ ASCII_BIN_DIGIT+ }
+dec = @{ ("_" | ASCII_DIGIT)+ }
+hex = @{ "0x" ~ ("_" | ASCII_HEX_DIGIT)+ }
+oct = @{ "0o" ~ ("_" | ASCII_OCT_DIGIT)+ }
+bin = @{ "0b" ~ ("_" | ASCII_BIN_DIGIT)+ }
 ans = { "ans" }
 
 operation = _{ add | subtract | multiply | divide | rem | lshift | rshift }
