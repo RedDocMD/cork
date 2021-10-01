@@ -1,4 +1,3 @@
-use home;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use std::path::PathBuf;
@@ -17,7 +16,7 @@ fn main() {
     let mut rl = Editor::<()>::new();
     let history_file_name = PathBuf::from(".cork_history");
     let home_dir = home::home_dir().unwrap_or_else(|| PathBuf::from("."));
-    let mut history_path = home_dir.clone();
+    let mut history_path = home_dir;
     history_path.push(history_file_name);
 
     if rl.load_history(&history_path).is_err() {
@@ -54,7 +53,7 @@ fn main() {
                                 eprintln!("{} is not a valid key", set[0]);
                             }
                         }
-                        expression::Command::Empty => println!(""),
+                        expression::Command::Empty => println!(),
                     },
                     Err(err) => eprintln!("Failed to parse \"{}\": {}", line, err),
                 };
