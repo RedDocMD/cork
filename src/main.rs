@@ -1,6 +1,8 @@
+use config::read_config;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use std::path::PathBuf;
+use std::process::exit;
 
 #[macro_use]
 extern crate pest_derive;
@@ -12,7 +14,17 @@ mod expression;
 mod format;
 
 fn main() {
-    welcome();
+    let config = match read_config() {
+        Ok(conf) => conf,
+        Err(err) => {
+            eprintln!("Failed to parse config: {}", err);
+            exit(1);
+        }
+    };
+
+    if *config.header() {
+        welcome();
+    }
 
     let mut rl = Editor::<()>::new();
     let history_file_name = PathBuf::from(".cork_history");
@@ -25,9 +37,10 @@ fn main() {
     }
 
     let mut of = format::OutputFormat::default();
+    of.set_format_style(*config.output_radix());
     let mut ans = 0;
     loop {
-        match rl.readline("cork> ") {
+        match rl.readline(config.prompt()) {
             Ok(line) => {
                 rl.add_history_entry(line.as_str());
                 match expression::parse_line(&line) {
