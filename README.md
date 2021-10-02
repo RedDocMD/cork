@@ -115,7 +115,9 @@ Cork accepts a config file in YAML. In absence of one, default values are assume
 
 ### Locations
 
-Cork looks at the following places for a config file (in the specified order):
+Cork accepts a path for its config file by the `-c/--config` option.
+
+Otherwise, Cork looks at the following places for a config file (in the specified order):
 
 1. `$HOME/.cork.yml`
 2. `$HOME/.cork/cork.yml`
