@@ -121,7 +121,7 @@ fn welcome() {
 }
 
 fn version() -> &'static str {
-    "0.1.2"
+    "0.2.0"
 }
 
 fn warranty() {
