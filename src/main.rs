@@ -41,36 +41,40 @@ fn main() {
     };
 
     if let Some(expr_str) = matches.value_of("expr") {
-        match expression::parse_line(expr_str) {
-            Ok(command) => match command {
-                expression::Command::Expr(expr) => match expression::eval::eval_expr(&expr, 0) {
-                    Ok(ans) => println!(
-                        "{}",
-                        format::fmt(
-                            ans,
-                            &OutputFormat::from_format_style(*config.output_radix())
-                        )
-                    ),
-                    Err(err) => {
-                        eprintln!("Failed to evaluate \"{}\": {}", expr_str, err);
-                        exit(1);
-                    }
-                },
-                expression::Command::Set(_) => {
-                    eprintln!("Set directive not allowed in inline-expression");
-                    exit(1);
-                }
-                expression::Command::Empty => {
-                    println!("Empty expression!")
-                }
-            },
-            Err(err) => {
-                eprintln!("Failed to parse \"{}\": {}", expr_str, err);
-                exit(1);
-            }
-        }
+        inline_evaluate(expr_str, &config);
     } else {
         interactive(&config);
+    }
+}
+
+fn inline_evaluate(expr_str: &str, config: &Config) {
+    match expression::parse_line(expr_str) {
+        Ok(command) => match command {
+            expression::Command::Expr(expr) => match expression::eval::eval_expr(&expr, 0) {
+                Ok(ans) => println!(
+                    "{}",
+                    format::fmt(
+                        ans,
+                        &OutputFormat::from_format_style(*config.output_radix())
+                    )
+                ),
+                Err(err) => {
+                    eprintln!("Failed to evaluate \"{}\": {}", expr_str, err);
+                    exit(1);
+                }
+            },
+            expression::Command::Set(_) => {
+                eprintln!("Set directive not allowed in inline-expression");
+                exit(1);
+            }
+            expression::Command::Empty => {
+                println!("Empty expression!")
+            }
+        },
+        Err(err) => {
+            eprintln!("Failed to parse \"{}\": {}", expr_str, err);
+            exit(1);
+        }
     }
 }
 
