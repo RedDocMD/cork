@@ -27,6 +27,10 @@ impl Default for OutputFormat {
 }
 
 impl OutputFormat {
+    pub fn from_format_style(f: FormatStyle) -> Self {
+        Self { style: f }
+    }
+
     pub fn set_format_style(&mut self, f: FormatStyle) {
         self.style = f;
     }

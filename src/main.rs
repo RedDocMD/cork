@@ -1,8 +1,11 @@
-use config::read_config;
+use clap::{App, Arg};
+use config::{read_config, Config};
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use std::path::PathBuf;
 use std::process::exit;
+
+use crate::format::OutputFormat;
 
 #[macro_use]
 extern crate pest_derive;
@@ -14,6 +17,21 @@ mod expression;
 mod format;
 
 fn main() {
+    let app = App::new("cork")
+        .version(version())
+        .author("Deep Majumder <deep.majumder2019@gmail.com>")
+        .about("Command-line calculator for hex-lovers")
+        .arg(
+            Arg::with_name("expr")
+                .long("expr")
+                .short("e")
+                .takes_value(true)
+                .value_name("EXPR")
+                .help("evaluate <EXPR> and print it"),
+        );
+
+    let matches = app.get_matches();
+
     let config = match read_config() {
         Ok(conf) => conf,
         Err(err) => {
@@ -22,6 +40,41 @@ fn main() {
         }
     };
 
+    if let Some(expr_str) = matches.value_of("expr") {
+        match expression::parse_line(expr_str) {
+            Ok(command) => match command {
+                expression::Command::Expr(expr) => match expression::eval::eval_expr(&expr, 0) {
+                    Ok(ans) => println!(
+                        "{}",
+                        format::fmt(
+                            ans,
+                            &OutputFormat::from_format_style(*config.output_radix())
+                        )
+                    ),
+                    Err(err) => {
+                        eprintln!("Failed to evaluate \"{}\": {}", expr_str, err);
+                        exit(1);
+                    }
+                },
+                expression::Command::Set(_) => {
+                    eprintln!("Set directive not allowed in inline-expression");
+                    exit(1);
+                }
+                expression::Command::Empty => {
+                    println!("Empty expression!")
+                }
+            },
+            Err(err) => {
+                eprintln!("Failed to parse \"{}\": {}", expr_str, err);
+                exit(1);
+            }
+        }
+    } else {
+        interactive(&config);
+    }
+}
+
+fn interactive(config: &Config) {
     if *config.header() {
         welcome();
     }
