@@ -146,12 +146,12 @@ fn interactive(config: &Config) {
     rl.save_history(&history_path).unwrap();
 }
 
-const LICENSE_HEADER: &'static str = "Copyright (C) 2021 Deep Majumder
+const LICENSE_HEADER: &str = "Copyright (C) 2021 Deep Majumder
 This is free software; see the source code for copying conditions.
 There is ABSOLUTELY NO WARRANTY; not even for MERCHANTABILITY or
 FITNESS FOR A PARTICULAR PURPOSE.  For details, type 'warranty'.";
 
-const WARRANTY: &'static str = "Copyright (C) 2021 Deep Majumder
+const WARRANTY: &str = "Copyright (C) 2021 Deep Majumder
 
 Cork is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by

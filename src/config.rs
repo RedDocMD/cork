@@ -34,7 +34,7 @@ fn config_locations() -> Vec<PathBuf> {
             let mut at_cork = home.clone();
             at_cork.push(".cork");
             at_cork.push("cork.yml");
-            let mut at_config = home.clone();
+            let mut at_config = home;
             at_config.push(".config");
             at_config.push("cork");
             at_config.push("cork.yml");
