@@ -14,6 +14,7 @@
   - [Usage](#usage)
     - [Numbers](#numbers)
     - [Set directives](#set-directives)
+    - [Inline evaluation](#inline-evaluation)
   - [Configuration](#configuration)
     - [Locations](#locations)
     - [Keys](#keys)
@@ -55,7 +56,7 @@ To install from [crates.io](https://crates.io/crates/cork), run `cargo install c
 
 ## Usage
 
-Cork is a REPL calculator, so you can put in expressions and it displays the answer. A sample run goes like:
+Cork is normally a REPL calculator, so you can put in expressions and it displays the answer. A sample run goes like:
 
 ```text
 Welcome to cork - a calculator for hex-lovers!
@@ -74,6 +75,8 @@ Exiting ...
 ```
 
 Oh, btw, Cork uses [rustyline](https://github.com/kkawakam/rustyline). So you get the whole `readline` goodness (including a history).
+
+Cork also features an inline-expression evaluation mode (probably useful in scripts).
 
 ### Numbers
 
@@ -101,6 +104,10 @@ As of now, Cork has the following keys:
 | Key | Possible Values    | Purpose                |
 | --- | ------------------ | ---------------------- |
 | of  | hex, dec, oct, bin | Sets the output format |
+
+### Inline evaluation
+
+With the `-e/--expr` flag, Cork accepts an expression to evaluate. The expression cannot be a set-directive. The expression is evaluated and the answer is printed in the default output radix.
 
 ## Configuration
 
