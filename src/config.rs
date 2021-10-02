@@ -1,4 +1,8 @@
-use std::{fs::File, io::Read, path::PathBuf};
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+};
 
 use crate::format::FormatStyle;
 use anyhow::Result as AResult;
@@ -44,13 +48,18 @@ fn config_locations() -> Vec<PathBuf> {
     }
 }
 
-pub fn read_config() -> AResult<Config> {
-    let locations = config_locations();
+pub fn read_config<T: AsRef<Path>>(user_path: Option<T>) -> AResult<Config> {
     let mut content = String::new();
-    for loc in &locations {
-        if loc.exists() && loc.is_file() {
-            let mut file = File::open(loc)?;
-            file.read_to_string(&mut content)?;
+    if let Some(user_path) = user_path {
+        let mut file = File::open(user_path)?;
+        file.read_to_string(&mut content)?;
+    } else {
+        let locations = config_locations();
+        for loc in &locations {
+            if loc.exists() && loc.is_file() {
+                let mut file = File::open(loc)?;
+                file.read_to_string(&mut content)?;
+            }
         }
     }
     if content.is_empty() {

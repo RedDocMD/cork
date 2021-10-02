@@ -28,11 +28,19 @@ fn main() {
                 .takes_value(true)
                 .value_name("EXPR")
                 .help("evaluate <EXPR> and print it"),
+        )
+        .arg(
+            Arg::with_name("config")
+                .long("config")
+                .short("c")
+                .takes_value(true)
+                .value_name("PATH")
+                .help("load config file from <PATH>"),
         );
 
     let matches = app.get_matches();
 
-    let config = match read_config() {
+    let config = match read_config(matches.value_of("config")) {
         Ok(conf) => conf,
         Err(err) => {
             eprintln!("Failed to parse config: {}", err);
