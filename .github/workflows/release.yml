@@ -2,7 +2,7 @@ name: Release Assets
 
 on:
   push:
-    tags: 'v*'
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -14,19 +14,35 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
+      - name: Test
+        run: cargo test --release
+      - name: Build
+        run: cargo build --release
       - name: Install Python dependencies
         run: |
           python3 -m pip install gitpython termcolor requests
       - name: Upload Assets
         run: |
           python3 .github/workflows/make_release.py target/release/cork $GITHUB_TOKEN
+  
+  windows:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: bash
+    
+    steps:
+      - uses: actions/checkout@v2
+      - name: Test
+        run: cargo test --release
+      - name: Build
+        run: cargo build --release
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install gitpython termcolor requests
+      - name: Upload portable executable
+        run: |
+          cp target/release/cork.exe ./cork-${GITHUB_REF##*/}-portable.exe
+          python3 .github/workflows/make_release.py \
+            ./cork-${GITHUB_REF##*/}-portable.exe $GITHUB_TOKEN
