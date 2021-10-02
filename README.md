@@ -4,13 +4,28 @@
 ![license](https://img.shields.io/crates/l/cork)
 [![Rust](https://github.com/RedDocMD/cork/actions/workflows/cargo-test.yml/badge.svg)](https://github.com/RedDocMD/cork/actions/workflows/cargo-test.yml)
 
+- [Cork](#cork)
+  - [History](#history)
+    - [Naming](#naming)
+  - [Installation](#installation)
+    - [Prebuilt binary](#prebuilt-binary)
+    - [Build from source](#build-from-source)
+    - [From crates.io](#from-cratesio)
+  - [Usage](#usage)
+    - [Numbers](#numbers)
+    - [Set directives](#set-directives)
+  - [Configuration](#configuration)
+    - [Locations](#locations)
+    - [Keys](#keys)
+  - [LICENSE](#license)
+
 ![Usage](assets/usage.svg)
 
 Cork is a simple command-line calculator, mainly targeted towards people who deal with hex numbers. It deals only with **integer** arithmetic. Expressions may involve mixed bases (limited to *decimal*, *hexadecimal*, *octal* and *binary* numbers). The global output format may be set to a particular radix - by default it is hex.
 
 ## History
 
-Cork is something that I wrote over a weekend, when I was getting annoyed at having to punch in 16 digit hex numbers on my calculator. I wanted something on my screen, and naturally on the terminal. But all the calculator programs that I found online (including a REPL of Python and Octave) had a glaring problem - they could work on hex numbers, but the _output was always in decimal_. So I hit to `cargo new` ... 
+Cork is something that I wrote over a weekend, when I was getting annoyed at having to punch in 16 digit hex numbers on my calculator. I wanted something on my screen, and naturally on the terminal. But all the calculator programs that I found online (including a REPL of Python and Octave) had a glaring problem - they could work on hex numbers, but the _output was always in decimal_. So I hit to `cargo new` ...
 
 ### Naming
 
@@ -42,7 +57,7 @@ To install from [crates.io](https://crates.io/crates/cork), run `cargo install c
 
 Cork is a REPL calculator, so you can put in expressions and it displays the answer. A sample run goes like:
 
-```
+```text
 Welcome to cork - a calculator for hex-lovers!
 Press Ctrl + D to exit.
 cork> 0xCAFE
@@ -71,18 +86,41 @@ Cork accepts four types of numbers:
 
 In addition, `ans` holds the answer of the last computation. It is initialized to `0` on startup.
 
+**Underscores (_)** are allowed as separators.
+
 ### Set directives
 
 Cork has something called set directives, which basically set some global property. They are of the form
-```
+
+```text
 set <key> <value>
 ```
 
 As of now, Cork has the following keys:
 
-Key | Possible Values | Purpose
---- | --------------- | --------
-of | hex, dec, oct, bin | Sets the output format
+| Key | Possible Values    | Purpose                |
+| --- | ------------------ | ---------------------- |
+| of  | hex, dec, oct, bin | Sets the output format |
+
+## Configuration
+
+Cork accepts a config file in YAML. In absence of one, default values are assumed.
+
+### Locations
+
+Cork looks at the following places for a config file (in the specified order):
+
+1. `$HOME/.cork.yml`
+2. `$HOME/.cork/cork.yml`
+3. `$HOME/.config/cork/cork.yml`
+
+### Keys
+
+| Key           | Possible Values             | Default | Purpose                                      |
+| ------------- | --------------------------- | ------- | -------------------------------------------- |
+| prompt        | `string`                    | cork>   | Prompt to show at the beginning of each line |
+| default_radix | Decimal, Hex, Octal, Binary | Hex     | Default radix for the output format          |
+| header        | `bool`                      | true    | Show the header at startup                   |
 
 ## LICENSE
 
