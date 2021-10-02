@@ -42,6 +42,10 @@ fn main() {
     loop {
         match rl.readline(config.prompt()) {
             Ok(line) => {
+                if line == "warranty" {
+                    warranty();
+                    continue;
+                }
                 rl.add_history_entry(line.as_str());
                 match expression::parse_line(&line) {
                     Ok(command) => match command {
@@ -89,7 +93,38 @@ fn main() {
     rl.save_history(&history_path).unwrap();
 }
 
+const LICENSE_HEADER: &'static str = "Copyright (C) 2021 Deep Majumder
+This is free software; see the source code for copying conditions.
+There is ABSOLUTELY NO WARRANTY; not even for MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  For details, type 'warranty'.";
+
+const WARRANTY: &'static str = "Copyright (C) 2021 Deep Majumder
+
+Cork is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by
+the Free Software Foundation, version 2 of the License.
+
+Cork is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Cork; see the file LICENSE.  If not, see
+<https://www.gnu.org/licenses/>.";
+
 fn welcome() {
+    println!("Cork, version {}", version());
+    println!("{}\n", LICENSE_HEADER);
     println!("Welcome to cork - a calculator for hex-lovers!");
     println!("Press Ctrl + D to exit.");
+}
+
+fn version() -> &'static str {
+    "0.1.2"
+}
+
+fn warranty() {
+    println!("Cork, version {}", version());
+    println!("{}", WARRANTY);
 }
