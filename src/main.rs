@@ -15,6 +15,7 @@ extern crate lazy_static;
 mod config;
 mod expression;
 mod format;
+mod reader;
 
 fn main() {
     let app = App::new("cork")
@@ -36,6 +37,14 @@ fn main() {
                 .takes_value(true)
                 .value_name("PATH")
                 .help("load config file from <PATH>"),
+        )
+        .arg(
+            Arg::with_name("file")
+                .long("file")
+                .short("f")
+                .takes_value(true)
+                .value_name("PATH")
+                .help("load script file to run line by line"),
         );
 
     let matches = app.get_matches();
@@ -50,9 +59,39 @@ fn main() {
 
     if let Some(expr_str) = matches.value_of("expr") {
         inline_evaluate(expr_str, &config);
+    } else if let Some(file_path) = matches.value_of("file") {
+        script_evaluate(file_path, &config);
     } else {
         interactive(&config);
     }
+}
+
+fn script_evaluate(file_path: &str, config: &Config) {
+    let mut ans = 0;
+    let mut of = format::OutputFormat::default();
+    of.set_format_style(*config.output_radix());
+
+    let mut rl = Editor::<()>::new();
+    let history_file_name = PathBuf::from(".cork_history");
+    let home_dir = home::home_dir().unwrap_or_else(|| PathBuf::from("."));
+    let mut history_path = home_dir;
+    history_path.push(history_file_name);
+
+    if rl.load_history(&history_path).is_err() {
+        println!("No existing history!\n");
+    }
+
+    if let Ok(lines) = reader::read_file(file_path) {
+        for line in lines.flatten() {
+            rl.add_history_entry(line.as_str());
+            if line == "warranty" {
+                warranty();
+                continue;
+            }
+            proccess_command(line, &mut ans, &mut of);
+        }
+    }
+    rl.save_history(&history_path).unwrap();
 }
 
 fn inline_evaluate(expr_str: &str, config: &Config) {
@@ -111,35 +150,7 @@ fn interactive(config: &Config) {
                     warranty();
                     continue;
                 }
-                rl.add_history_entry(line.as_str());
-                match expression::parse_line(&line) {
-                    Ok(command) => match command {
-                        expression::Command::Expr(expr) => {
-                            match expression::eval::eval_expr(&expr, ans) {
-                                Ok(val) => {
-                                    ans = val;
-                                    println!("{}", format::fmt(val, &of));
-                                }
-                                Err(err) => eprintln!("Failed to evaluate \"{}\": {}", line, err),
-                            }
-                        }
-                        expression::Command::Set(set) => {
-                            if set[0] == "of" {
-                                match set[1].as_str() {
-                                    "hex" => of.set_format_style(format::FormatStyle::Hex),
-                                    "dec" => of.set_format_style(format::FormatStyle::Decimal),
-                                    "oct" => of.set_format_style(format::FormatStyle::Octal),
-                                    "bin" => of.set_format_style(format::FormatStyle::Binary),
-                                    _ => eprintln!("Invalid {} value for key {}", set[1], set[0]),
-                                }
-                            } else {
-                                eprintln!("{} is not a valid key", set[0]);
-                            }
-                        }
-                        expression::Command::Empty => println!(),
-                    },
-                    Err(err) => eprintln!("Failed to parse \"{}\": {}", line, err),
-                };
+                proccess_command(line, &mut ans, &mut of);
             }
             Err(ReadlineError::Eof) => {
                 println!("Exiting ... ");
@@ -156,6 +167,35 @@ fn interactive(config: &Config) {
     }
 
     rl.save_history(&history_path).unwrap();
+}
+
+fn proccess_command(line: String, ans: &mut i64, of: &mut OutputFormat) {
+    match expression::parse_line(&line) {
+        Ok(command) => match command {
+            expression::Command::Expr(expr) => match expression::eval::eval_expr(&expr, *ans) {
+                Ok(val) => {
+                    *ans = val;
+                    println!("{}", format::fmt(val, &of));
+                }
+                Err(err) => eprintln!("Failed to evaluate \"{}\": {}", line, err),
+            },
+            expression::Command::Set(set) => {
+                if set[0] == "of" {
+                    match set[1].as_str() {
+                        "hex" => of.set_format_style(format::FormatStyle::Hex),
+                        "dec" => of.set_format_style(format::FormatStyle::Decimal),
+                        "oct" => of.set_format_style(format::FormatStyle::Octal),
+                        "bin" => of.set_format_style(format::FormatStyle::Binary),
+                        _ => eprintln!("Invalid {} value for key {}", set[1], set[0]),
+                    }
+                } else {
+                    eprintln!("{} is not a valid key", set[0]);
+                }
+            }
+            expression::Command::Empty => println!(),
+        },
+        Err(err) => eprintln!("Failed to parse \"{}\": {}", line, err),
+    };
 }
 
 const LICENSE_HEADER: &str = "Copyright (C) 2021 Deep Majumder
