@@ -2,6 +2,8 @@ use clap::{App, Arg};
 use config::{read_config, Config};
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
+use std::fs::File;
+use std::io::{self, BufRead, Error as IoError};
 use std::path::PathBuf;
 use std::process::exit;
 
@@ -15,7 +17,6 @@ extern crate lazy_static;
 mod config;
 mod expression;
 mod format;
-mod reader;
 
 fn main() {
     let app = App::new("cork")
@@ -67,31 +68,39 @@ fn main() {
 }
 
 fn script_evaluate(file_path: &str, config: &Config) {
+    let file = File::open(file_path);
+
+    let file = match file {
+        Ok(file) => file,
+        Err(_error) => panic!("Failed to open file {}", file_path),
+    };
+
+    let lines = io::BufReader::new(file).lines();
+
     let mut ans = 0;
     let mut of = format::OutputFormat::default();
     of.set_format_style(*config.output_radix());
 
-    let mut rl = Editor::<()>::new();
-    let history_file_name = PathBuf::from(".cork_history");
-    let home_dir = home::home_dir().unwrap_or_else(|| PathBuf::from("."));
-    let mut history_path = home_dir;
-    history_path.push(history_file_name);
-
-    if rl.load_history(&history_path).is_err() {
-        println!("No existing history!\n");
-    }
-
-    if let Ok(lines) = reader::read_file(file_path) {
-        for line in lines.flatten() {
-            rl.add_history_entry(line.as_str());
-            if line == "warranty" {
-                warranty();
-                continue;
+    for line in lines {
+        let _line = match line {
+            Ok(line) => line,
+            Err(err) => {
+                eprintln!("Failed to read file {}", err);
+                break;
             }
-            proccess_command(line, &mut ans, &mut of);
+        };
+        if _line == "warranty" {
+            warranty();
+            continue;
         }
+        let _ = match proccess_command(_line, &mut ans, &mut of) {
+            Ok(_) => continue,
+            Err(e) => {
+                eprintln!("{}", e);
+                break;
+            }
+        };
     }
-    rl.save_history(&history_path).unwrap();
 }
 
 fn inline_evaluate(expr_str: &str, config: &Config) {
@@ -150,7 +159,12 @@ fn interactive(config: &Config) {
                     warranty();
                     continue;
                 }
-                proccess_command(line, &mut ans, &mut of);
+                let _ = match proccess_command(line, &mut ans, &mut of) {
+                    Ok(_) => continue,
+                    Err(e) => {
+                        eprintln!("{}", e);
+                    }
+                };
             }
             Err(ReadlineError::Eof) => {
                 println!("Exiting ... ");
@@ -169,15 +183,19 @@ fn interactive(config: &Config) {
     rl.save_history(&history_path).unwrap();
 }
 
-fn proccess_command(line: String, ans: &mut i64, of: &mut OutputFormat) {
+fn proccess_command(
+    line: String,
+    ans: &mut i64,
+    of: &mut OutputFormat,
+) -> Result<(), Box<dyn std::error::Error>> {
     match expression::parse_line(&line) {
         Ok(command) => match command {
             expression::Command::Expr(expr) => match expression::eval::eval_expr(&expr, *ans) {
                 Ok(val) => {
                     *ans = val;
-                    println!("{}", format::fmt(val, &of));
+                    println!("{}", format::fmt(val, of));
                 }
-                Err(err) => eprintln!("Failed to evaluate \"{}\": {}", line, err),
+                Err(err) => return Err(Box::new(err)),
             },
             expression::Command::Set(set) => {
                 if set[0] == "of" {
@@ -186,16 +204,25 @@ fn proccess_command(line: String, ans: &mut i64, of: &mut OutputFormat) {
                         "dec" => of.set_format_style(format::FormatStyle::Decimal),
                         "oct" => of.set_format_style(format::FormatStyle::Octal),
                         "bin" => of.set_format_style(format::FormatStyle::Binary),
-                        _ => eprintln!("Invalid {} value for key {}", set[1], set[0]),
+                        _ => {
+                            return Err(Box::new(IoError::new(
+                                io::ErrorKind::InvalidInput,
+                                format!("Invalid {} value for key {}", set[1], set[0]),
+                            )));
+                        }
                     }
                 } else {
-                    eprintln!("{} is not a valid key", set[0]);
+                    return Err(Box::new(IoError::new(
+                        io::ErrorKind::InvalidInput,
+                        format!("{} is not a valid key", set[0]),
+                    )));
                 }
             }
             expression::Command::Empty => println!(),
         },
-        Err(err) => eprintln!("Failed to parse \"{}\": {}", line, err),
+        Err(err) => return Err(Box::new(err)),
     };
+    Ok(())
 }
 
 const LICENSE_HEADER: &str = "Copyright (C) 2021 Deep Majumder
