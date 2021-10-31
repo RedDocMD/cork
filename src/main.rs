@@ -3,7 +3,7 @@ use config::{read_config, Config};
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use std::fs::File;
-use std::io::{self, BufRead, Error as IoError};
+use std::io::{self, BufRead};
 use std::path::PathBuf;
 use std::process::exit;
 
@@ -15,6 +15,7 @@ extern crate pest_derive;
 extern crate lazy_static;
 
 mod config;
+mod error;
 mod expression;
 mod format;
 
@@ -72,7 +73,10 @@ fn script_evaluate(file_path: &str, config: &Config) {
 
     let file = match file {
         Ok(file) => file,
-        Err(_error) => panic!("Failed to open file {}", file_path),
+        Err(err) => {
+            eprintln!("{}", err);
+            exit(1);
+        }
     };
 
     let lines = io::BufReader::new(file).lines();
@@ -82,22 +86,22 @@ fn script_evaluate(file_path: &str, config: &Config) {
     of.set_format_style(*config.output_radix());
 
     for line in lines {
-        let _line = match line {
+        let line = match line {
             Ok(line) => line,
             Err(err) => {
-                eprintln!("Failed to read file {}", err);
-                break;
+                eprintln!("{}", err);
+                exit(1);
             }
         };
-        if _line == "warranty" {
+        if line == "warranty" {
             warranty();
             continue;
         }
-        let _ = match proccess_command(_line, &mut ans, &mut of) {
+        let _ = match proccess_command(line, &mut ans, &mut of) {
             Ok(_) => continue,
             Err(e) => {
                 eprintln!("{}", e);
-                break;
+                exit(1);
             }
         };
     }
@@ -187,7 +191,7 @@ fn proccess_command(
     line: String,
     ans: &mut i64,
     of: &mut OutputFormat,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), error::ProccessCommandError> {
     match expression::parse_line(&line) {
         Ok(command) => match command {
             expression::Command::Expr(expr) => match expression::eval::eval_expr(&expr, *ans) {
@@ -195,7 +199,7 @@ fn proccess_command(
                     *ans = val;
                     println!("{}", format::fmt(val, of));
                 }
-                Err(err) => return Err(Box::new(err)),
+                Err(_) => return Err(error::ProccessCommandError::Evaluation),
             },
             expression::Command::Set(set) => {
                 if set[0] == "of" {
@@ -205,22 +209,19 @@ fn proccess_command(
                         "oct" => of.set_format_style(format::FormatStyle::Octal),
                         "bin" => of.set_format_style(format::FormatStyle::Binary),
                         _ => {
-                            return Err(Box::new(IoError::new(
-                                io::ErrorKind::InvalidInput,
-                                format!("Invalid {} value for key {}", set[1], set[0]),
-                            )));
+                            return Err(error::ProccessCommandError::InvalidValueForKey {
+                                key: set[0].clone(),
+                                value: set[1].clone(),
+                            });
                         }
                     }
                 } else {
-                    return Err(Box::new(IoError::new(
-                        io::ErrorKind::InvalidInput,
-                        format!("{} is not a valid key", set[0]),
-                    )));
+                    return Err(error::ProccessCommandError::InvalidKey(set[0].clone()));
                 }
             }
             expression::Command::Empty => println!(),
         },
-        Err(err) => return Err(Box::new(err)),
+        Err(_) => return Err(error::ProccessCommandError::Parsing),
     };
     Ok(())
 }
