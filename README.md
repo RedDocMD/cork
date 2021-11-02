@@ -80,6 +80,8 @@ Oh, btw, Cork uses [rustyline](https://github.com/kkawakam/rustyline). So you ge
 
 Cork also features an inline-expression evaluation mode (probably useful in scripts).
 
+In addition, Cork can be run on a file (**scripting-mode**), which executes the file as a script.
+
 ### Numbers
 
 Cork accepts four types of numbers:
@@ -110,6 +112,10 @@ As of now, Cork has the following keys:
 ### Inline evaluation
 
 With the `-e/--expr` flag, Cork accepts an expression to evaluate. The expression cannot be a set-directive. The expression is evaluated and the answer is printed in the default output radix.
+
+### Script evaluation
+
+With the `-f/--file` flag, Cork accepts the path of a file. This file will be executed as a script from top to bottom. Any command allowed in the REPL is allowed in the script. The script will print its outputs to `stdout` and its errors to `stderr`.
 
 ## Configuration
 
