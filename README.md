@@ -15,6 +15,7 @@
     - [Numbers](#numbers)
     - [Set directives](#set-directives)
     - [Inline evaluation](#inline-evaluation)
+    - [Script evaluation](#script-evaluation)
   - [Configuration](#configuration)
     - [Locations](#locations)
     - [Keys](#keys)
