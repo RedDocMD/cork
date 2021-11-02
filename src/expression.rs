@@ -1,4 +1,4 @@
-use pest::error::Error as PestError;
+use crate::error::CorkError;
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::PrecClimber;
 use pest::Parser;
@@ -11,6 +11,9 @@ use std::str::FromStr;
 #[derive(Parser)]
 #[grammar = "expression.peg"]
 struct CommandParser;
+
+use pest::error::Error as PestError;
+pub(crate) type PestRuleError = PestError<Rule>;
 
 /// An Expr is either a node (which corresponds to a binary operation) or a leaf (which corresponds
 /// to a number).
@@ -100,7 +103,7 @@ pub enum Command {
 
 /// parse_line takes in a user input, and parses it to a valid Command
 /// or results in a parse error.
-pub fn parse_line<T: AsRef<str>>(line: T) -> Result<Command, PestError<Rule>> {
+pub fn parse_line<T: AsRef<str>>(line: T) -> Result<Command, CorkError> {
     let comm = CommandParser::parse(Rule::line, line.as_ref())?.next();
     if comm.is_none() {
         return Ok(Command::Empty);
@@ -193,22 +196,9 @@ fn parse_expr(expression: Pairs<Rule>) -> Expr {
 }
 
 pub mod eval {
-    use std::fmt;
-
     use super::*;
 
-    #[derive(Debug)]
-    pub struct EvalError(String);
-
-    impl fmt::Display for EvalError {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "{}", self.0)
-        }
-    }
-
-    impl std::error::Error for EvalError {}
-
-    pub fn eval_expr(expr: &Expr, ans: i64) -> Result<i64, EvalError> {
+    pub fn eval_expr(expr: &Expr, ans: i64) -> Result<i64, CorkError> {
         match &expr {
             Expr::Num(num) => Ok(*num),
             Expr::BinOp(expr) => {
@@ -222,14 +212,14 @@ pub mod eval {
                     Op::RShift => Ok(left >> right),
                     Op::Div => {
                         if right == 0 {
-                            Err(EvalError(String::from("Cannot divide by 0")))
+                            Err(CorkError::Eval(String::from("Cannot divide by 0")))
                         } else {
                             Ok(left / right)
                         }
                     }
                     Op::Rem => {
                         if right == 0 {
-                            Err(EvalError(String::from("Cannot divide by 0")))
+                            Err(CorkError::Eval(String::from("Cannot divide by 0")))
                         } else {
                             Ok(left % right)
                         }

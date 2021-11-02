@@ -1,13 +1,14 @@
+use crate::expression::PestRuleError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum ProccessCommandError {
-    #[error("Couldn't evaluate the expressison")]
-    Evaluation,
-    #[error("Invalid {value:?} value for key {key:?}")]
+pub enum CorkError {
+    #[error("couldn't evaluate the expressison: {0}")]
+    Eval(String),
+    #[error("invalid {value} value for key {key}")]
     InvalidValueForKey { value: String, key: String },
     #[error("{0} is not a valid key")]
     InvalidKey(String),
-    #[error("Parsing Error")]
-    Parsing,
+    #[error("parsing error:\n{0}")]
+    Parse(#[from] PestRuleError),
 }

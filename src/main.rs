@@ -1,5 +1,6 @@
 use clap::{App, Arg};
 use config::{read_config, Config};
+use error::CorkError;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use std::fs::File;
@@ -187,41 +188,33 @@ fn interactive(config: &Config) {
     rl.save_history(&history_path).unwrap();
 }
 
-fn proccess_command(
-    line: String,
-    ans: &mut i64,
-    of: &mut OutputFormat,
-) -> Result<(), error::ProccessCommandError> {
-    match expression::parse_line(&line) {
-        Ok(command) => match command {
-            expression::Command::Expr(expr) => match expression::eval::eval_expr(&expr, *ans) {
-                Ok(val) => {
-                    *ans = val;
-                    println!("{}", format::fmt(val, of));
-                }
-                Err(_) => return Err(error::ProccessCommandError::Evaluation),
-            },
-            expression::Command::Set(set) => {
-                if set[0] == "of" {
-                    match set[1].as_str() {
-                        "hex" => of.set_format_style(format::FormatStyle::Hex),
-                        "dec" => of.set_format_style(format::FormatStyle::Decimal),
-                        "oct" => of.set_format_style(format::FormatStyle::Octal),
-                        "bin" => of.set_format_style(format::FormatStyle::Binary),
-                        _ => {
-                            return Err(error::ProccessCommandError::InvalidValueForKey {
-                                key: set[0].clone(),
-                                value: set[1].clone(),
-                            });
-                        }
+fn proccess_command(line: String, ans: &mut i64, of: &mut OutputFormat) -> Result<(), CorkError> {
+    let command = expression::parse_line(&line)?;
+    match command {
+        expression::Command::Expr(expr) => {
+            let val = expression::eval::eval_expr(&expr, *ans)?;
+            *ans = val;
+            println!("{}", format::fmt(val, of));
+        }
+        expression::Command::Set(set) => {
+            if set[0] == "of" {
+                match set[1].as_str() {
+                    "hex" => of.set_format_style(format::FormatStyle::Hex),
+                    "dec" => of.set_format_style(format::FormatStyle::Decimal),
+                    "oct" => of.set_format_style(format::FormatStyle::Octal),
+                    "bin" => of.set_format_style(format::FormatStyle::Binary),
+                    _ => {
+                        return Err(error::CorkError::InvalidValueForKey {
+                            key: set[0].clone(),
+                            value: set[1].clone(),
+                        });
                     }
-                } else {
-                    return Err(error::ProccessCommandError::InvalidKey(set[0].clone()));
                 }
+            } else {
+                return Err(error::CorkError::InvalidKey(set[0].clone()));
             }
-            expression::Command::Empty => println!(),
-        },
-        Err(_) => return Err(error::ProccessCommandError::Parsing),
+        }
+        expression::Command::Empty => println!(),
     };
     Ok(())
 }
