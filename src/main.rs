@@ -2,6 +2,8 @@ use clap::{App, Arg};
 use config::{read_config, Config};
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
+use std::fs::File;
+use std::io::{self, BufRead};
 use std::path::PathBuf;
 use std::process::exit;
 
@@ -13,6 +15,7 @@ extern crate pest_derive;
 extern crate lazy_static;
 
 mod config;
+mod error;
 mod expression;
 mod format;
 
@@ -36,6 +39,14 @@ fn main() {
                 .takes_value(true)
                 .value_name("PATH")
                 .help("load config file from <PATH>"),
+        )
+        .arg(
+            Arg::with_name("file")
+                .long("file")
+                .short("f")
+                .takes_value(true)
+                .value_name("PATH")
+                .help("load script file to run line by line"),
         );
 
     let matches = app.get_matches();
@@ -50,8 +61,49 @@ fn main() {
 
     if let Some(expr_str) = matches.value_of("expr") {
         inline_evaluate(expr_str, &config);
+    } else if let Some(file_path) = matches.value_of("file") {
+        script_evaluate(file_path, &config);
     } else {
         interactive(&config);
+    }
+}
+
+fn script_evaluate(file_path: &str, config: &Config) {
+    let file = File::open(file_path);
+
+    let file = match file {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("{}", err);
+            exit(1);
+        }
+    };
+
+    let lines = io::BufReader::new(file).lines();
+
+    let mut ans = 0;
+    let mut of = format::OutputFormat::default();
+    of.set_format_style(*config.output_radix());
+
+    for line in lines {
+        let line = match line {
+            Ok(line) => line,
+            Err(err) => {
+                eprintln!("{}", err);
+                exit(1);
+            }
+        };
+        if line == "warranty" {
+            warranty();
+            continue;
+        }
+        let _ = match proccess_command(line, &mut ans, &mut of) {
+            Ok(_) => continue,
+            Err(e) => {
+                eprintln!("{}", e);
+                exit(1);
+            }
+        };
     }
 }
 
@@ -111,34 +163,11 @@ fn interactive(config: &Config) {
                     warranty();
                     continue;
                 }
-                rl.add_history_entry(line.as_str());
-                match expression::parse_line(&line) {
-                    Ok(command) => match command {
-                        expression::Command::Expr(expr) => {
-                            match expression::eval::eval_expr(&expr, ans) {
-                                Ok(val) => {
-                                    ans = val;
-                                    println!("{}", format::fmt(val, &of));
-                                }
-                                Err(err) => eprintln!("Failed to evaluate \"{}\": {}", line, err),
-                            }
-                        }
-                        expression::Command::Set(set) => {
-                            if set[0] == "of" {
-                                match set[1].as_str() {
-                                    "hex" => of.set_format_style(format::FormatStyle::Hex),
-                                    "dec" => of.set_format_style(format::FormatStyle::Decimal),
-                                    "oct" => of.set_format_style(format::FormatStyle::Octal),
-                                    "bin" => of.set_format_style(format::FormatStyle::Binary),
-                                    _ => eprintln!("Invalid {} value for key {}", set[1], set[0]),
-                                }
-                            } else {
-                                eprintln!("{} is not a valid key", set[0]);
-                            }
-                        }
-                        expression::Command::Empty => println!(),
-                    },
-                    Err(err) => eprintln!("Failed to parse \"{}\": {}", line, err),
+                let _ = match proccess_command(line, &mut ans, &mut of) {
+                    Ok(_) => continue,
+                    Err(e) => {
+                        eprintln!("{}", e);
+                    }
                 };
             }
             Err(ReadlineError::Eof) => {
@@ -156,6 +185,45 @@ fn interactive(config: &Config) {
     }
 
     rl.save_history(&history_path).unwrap();
+}
+
+fn proccess_command(
+    line: String,
+    ans: &mut i64,
+    of: &mut OutputFormat,
+) -> Result<(), error::ProccessCommandError> {
+    match expression::parse_line(&line) {
+        Ok(command) => match command {
+            expression::Command::Expr(expr) => match expression::eval::eval_expr(&expr, *ans) {
+                Ok(val) => {
+                    *ans = val;
+                    println!("{}", format::fmt(val, of));
+                }
+                Err(_) => return Err(error::ProccessCommandError::Evaluation),
+            },
+            expression::Command::Set(set) => {
+                if set[0] == "of" {
+                    match set[1].as_str() {
+                        "hex" => of.set_format_style(format::FormatStyle::Hex),
+                        "dec" => of.set_format_style(format::FormatStyle::Decimal),
+                        "oct" => of.set_format_style(format::FormatStyle::Octal),
+                        "bin" => of.set_format_style(format::FormatStyle::Binary),
+                        _ => {
+                            return Err(error::ProccessCommandError::InvalidValueForKey {
+                                key: set[0].clone(),
+                                value: set[1].clone(),
+                            });
+                        }
+                    }
+                } else {
+                    return Err(error::ProccessCommandError::InvalidKey(set[0].clone()));
+                }
+            }
+            expression::Command::Empty => println!(),
+        },
+        Err(_) => return Err(error::ProccessCommandError::Parsing),
+    };
+    Ok(())
 }
 
 const LICENSE_HEADER: &str = "Copyright (C) 2021 Deep Majumder

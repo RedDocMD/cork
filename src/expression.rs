@@ -1,4 +1,4 @@
-use pest::error::Error;
+use pest::error::Error as PestError;
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::PrecClimber;
 use pest::Parser;
@@ -100,7 +100,7 @@ pub enum Command {
 
 /// parse_line takes in a user input, and parses it to a valid Command
 /// or results in a parse error.
-pub fn parse_line<T: AsRef<str>>(line: T) -> Result<Command, Error<Rule>> {
+pub fn parse_line<T: AsRef<str>>(line: T) -> Result<Command, PestError<Rule>> {
     let comm = CommandParser::parse(Rule::line, line.as_ref())?.next();
     if comm.is_none() {
         return Ok(Command::Empty);
@@ -205,6 +205,8 @@ pub mod eval {
             write!(f, "{}", self.0)
         }
     }
+
+    impl std::error::Error for EvalError {}
 
     pub fn eval_expr(expr: &Expr, ans: i64) -> Result<i64, EvalError> {
         match &expr {
