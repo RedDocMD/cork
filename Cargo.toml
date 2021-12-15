@@ -11,7 +11,7 @@ keywords = ["calculator", "terminal"]
 categories = ["command-line-utilities", "mathematics"]
 
 [dependencies]
-rustyline = "8.0.0"
+rustyline = "9"
 pest = "2.1.3"
 pest_derive = "2.1.0"
 home = "0.5.3"

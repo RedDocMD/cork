@@ -23,7 +23,7 @@ pub struct Config {
 }
 
 fn default_prompt() -> String {
-    String::from("cork>")
+    String::from("cork> ")
 }
 
 fn default_header() -> bool {

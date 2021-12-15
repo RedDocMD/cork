@@ -160,6 +160,7 @@ fn interactive(config: &Config) {
     loop {
         match rl.readline(config.prompt()) {
             Ok(line) => {
+                rl.add_history_entry(&line);
                 if line == "warranty" {
                     warranty();
                     continue;
