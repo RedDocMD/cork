@@ -1,4 +1,4 @@
-use clap::{App, Arg};
+use clap::{crate_version, Parser};
 use config::{read_config, Config};
 use error::CorkError;
 use rustyline::error::ReadlineError;
@@ -12,8 +12,6 @@ use strum::IntoEnumIterator;
 use crate::format::{FormatRadix, OutputFormat};
 
 #[macro_use]
-extern crate pest_derive;
-#[macro_use]
 extern crate lazy_static;
 
 mod config;
@@ -21,45 +19,45 @@ mod error;
 mod expression;
 mod format;
 
+#[derive(Parser, Debug)]
+#[clap(author, version, about)]
+struct Options {
+    #[clap(
+        short,
+        long,
+        value_name = "EXPR",
+        help = "evaluate <EXPR> and print it"
+    )]
+    expr: Option<String>,
+
+    #[clap(
+        short,
+        long,
+        help = "prints the output in all the bases (works only in expr evaluation mode)"
+    )]
+    all_bases: bool,
+
+    #[clap(
+        short,
+        long,
+        value_name = "PATH",
+        help = "load config file from <PATH>"
+    )]
+    config: Option<String>,
+
+    #[clap(
+        short,
+        long,
+        value_name = "PATH",
+        help = "load script file from <PATH> to run line by line"
+    )]
+    file: Option<String>,
+}
+
 fn main() {
-    let app = App::new("cork")
-        .version(version())
-        .author("Deep Majumder <deep.majumder2019@gmail.com>")
-        .about("Command-line calculator for hex-lovers")
-        .arg(
-            Arg::with_name("expr")
-                .long("expr")
-                .short("e")
-                .takes_value(true)
-                .value_name("EXPR")
-                .help("evaluate <EXPR> and print it"),
-        )
-        .arg(
-            Arg::with_name("all_bases")
-                .long("all-bases")
-                .short("a")
-                .help("prints the output in all the bases (works only in expr evaluation mode)"),
-        )
-        .arg(
-            Arg::with_name("config")
-                .long("config")
-                .short("c")
-                .takes_value(true)
-                .value_name("PATH")
-                .help("load config file from <PATH>"),
-        )
-        .arg(
-            Arg::with_name("file")
-                .long("file")
-                .short("f")
-                .takes_value(true)
-                .value_name("PATH")
-                .help("load script file to run line by line"),
-        );
+    let options = Options::parse();
 
-    let matches = app.get_matches();
-
-    let config = match read_config(matches.value_of("config")) {
+    let config = match read_config(options.config.as_ref()) {
         Ok(conf) => conf,
         Err(err) => {
             eprintln!("Failed to parse config: {}", err);
@@ -67,9 +65,9 @@ fn main() {
         }
     };
 
-    if let Some(expr_str) = matches.value_of("expr") {
-        inline_evaluate(expr_str, &config, matches.is_present("all_bases"));
-    } else if let Some(file_path) = matches.value_of("file") {
+    if let Some(expr_str) = &options.expr {
+        inline_evaluate(expr_str, &config, &options);
+    } else if let Some(file_path) = &options.file {
         script_evaluate(file_path, &config);
     } else {
         interactive(&config);
@@ -114,12 +112,12 @@ fn script_evaluate(file_path: &str, config: &Config) {
     }
 }
 
-fn inline_evaluate(expr_str: &str, config: &Config, all_bases: bool) {
+fn inline_evaluate(expr_str: &str, config: &Config, options: &Options) {
     match expression::parse_line(expr_str) {
         Ok(command) => match command {
             expression::Command::Expr(expr) => match expression::eval::eval_expr(&expr, 0) {
                 Ok(ans) => {
-                    if all_bases {
+                    if options.all_bases {
                         for radix in FormatRadix::iter() {
                             println!(
                                 "{:>21}: {}",
@@ -257,17 +255,13 @@ along with Cork; see the file LICENSE.  If not, see
 <https://www.gnu.org/licenses/>.";
 
 fn welcome() {
-    println!("Cork, version {}", version());
+    println!("Cork, version {}", crate_version!());
     println!("{}\n", LICENSE_HEADER);
     println!("Welcome to cork - a calculator for hex-lovers!");
     println!("Press Ctrl + D to exit.");
 }
 
-fn version() -> &'static str {
-    "0.2.2"
-}
-
 fn warranty() {
-    println!("Cork, version {}", version());
+    println!("Cork, version {}", crate_version!());
     println!("{}", WARRANTY);
 }

@@ -2,6 +2,7 @@ use crate::error::CorkError;
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::PrecClimber;
 use pest::Parser;
+use pest_derive::Parser;
 use std::fmt;
 use std::i64;
 use std::num::ParseIntError;

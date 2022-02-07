@@ -2,7 +2,7 @@
 name = "cork"
 version = "0.2.2"
 authors = ["Deep Majumder <deep.majumder2019@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "A command-line calculator for hex-lovers."
 license = "GPL-2.0-only"
 repository = "https://github.com/RedDocMD/cork"
@@ -18,9 +18,9 @@ home = "0.5.3"
 lazy_static = "1.4.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
-getset = "0.1"
+getset = "0.1.2"
 anyhow = "1"
-clap = "2.33.3"
+clap = { version = "3.0.14", features = ["derive"] }
 thiserror = "1.0.30"
 strum = { version = "0.23.0", features = ["derive"] }
 colored = "2.0.0"
