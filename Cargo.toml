@@ -22,3 +22,5 @@ getset = "0.1"
 anyhow = "1"
 clap = "2.33.3"
 thiserror = "1.0.30"
+strum = { version = "0.23.0", features = ["derive"] }
+colored = "2.0.0"

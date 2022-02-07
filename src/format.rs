@@ -1,11 +1,24 @@
+use colored::*;
 use serde::Deserialize;
+use strum::EnumIter;
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+#[derive(EnumIter, Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
 pub enum FormatStyle {
     Decimal,
     Hex,
     Octal,
     Binary,
+}
+
+impl FormatStyle {
+    pub fn name(&self) -> String {
+        match self {
+            FormatStyle::Decimal => "Decimal".green().to_string(),
+            FormatStyle::Hex => "Hexadecimal".yellow().to_string(),
+            FormatStyle::Octal => "Octal".blue().to_string(),
+            FormatStyle::Binary => "Binary".magenta().to_string(),
+        }
+    }
 }
 
 impl Default for FormatStyle {

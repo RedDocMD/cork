@@ -7,8 +7,11 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::PathBuf;
 use std::process::exit;
+use strum::IntoEnumIterator;
 
 use crate::format::OutputFormat;
+
+use self::format::FormatStyle;
 
 #[macro_use]
 extern crate pest_derive;
@@ -32,6 +35,12 @@ fn main() {
                 .takes_value(true)
                 .value_name("EXPR")
                 .help("evaluate <EXPR> and print it"),
+        )
+        .arg(
+            Arg::with_name("all_bases")
+                .long("all-bases")
+                .short("a")
+                .help("prints the output in all the bases (works only in expr evaluation mode)"),
         )
         .arg(
             Arg::with_name("config")
@@ -61,7 +70,7 @@ fn main() {
     };
 
     if let Some(expr_str) = matches.value_of("expr") {
-        inline_evaluate(expr_str, &config);
+        inline_evaluate(expr_str, &config, matches.is_present("all_bases"));
     } else if let Some(file_path) = matches.value_of("file") {
         script_evaluate(file_path, &config);
     } else {
@@ -108,17 +117,29 @@ fn script_evaluate(file_path: &str, config: &Config) {
     }
 }
 
-fn inline_evaluate(expr_str: &str, config: &Config) {
+fn inline_evaluate(expr_str: &str, config: &Config, all_bases: bool) {
     match expression::parse_line(expr_str) {
         Ok(command) => match command {
             expression::Command::Expr(expr) => match expression::eval::eval_expr(&expr, 0) {
-                Ok(ans) => println!(
-                    "{}",
-                    format::fmt(
-                        ans,
-                        &OutputFormat::from_format_style(*config.output_radix())
-                    )
-                ),
+                Ok(ans) => {
+                    if all_bases {
+                        for radix in FormatStyle::iter() {
+                            println!(
+                                "{:>21}: {}",
+                                radix.name(),
+                                format::fmt(ans, &OutputFormat::from_format_style(radix))
+                            );
+                        }
+                    } else {
+                        println!(
+                            "{}",
+                            format::fmt(
+                                ans,
+                                &OutputFormat::from_format_style(*config.output_radix())
+                            )
+                        );
+                    }
+                }
                 Err(err) => {
                     eprintln!("Failed to evaluate \"{}\": {}", expr_str, err);
                     exit(1);
