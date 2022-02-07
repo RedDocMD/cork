@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::format::FormatStyle;
+use crate::format::FormatRadix;
 use anyhow::Result as AResult;
 use getset::Getters;
 use serde::Deserialize;
@@ -19,7 +19,7 @@ pub struct Config {
     header: bool,
 
     #[serde(default)]
-    output_radix: FormatStyle,
+    output_radix: FormatRadix,
 }
 
 fn default_prompt() -> String {
@@ -82,7 +82,7 @@ output_radix: Octal";
         let expected_config = Config {
             prompt: String::from("$"),
             header: false,
-            output_radix: FormatStyle::Octal,
+            output_radix: FormatRadix::Octal,
         };
         assert_eq!(config, expected_config);
     }
@@ -95,7 +95,7 @@ output_radix: Octal";
         let expected_config = Config {
             prompt: String::from("$"),
             header: default_header(),
-            output_radix: FormatStyle::Octal,
+            output_radix: FormatRadix::Octal,
         };
         assert_eq!(config, expected_config);
     }
@@ -107,7 +107,7 @@ output_radix: Octal";
         let expected_config = Config {
             prompt: default_prompt(),
             header: default_header(),
-            output_radix: FormatStyle::default(),
+            output_radix: FormatRadix::default(),
         };
         assert_eq!(config, expected_config);
     }

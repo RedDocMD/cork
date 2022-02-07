@@ -9,9 +9,7 @@ use std::path::PathBuf;
 use std::process::exit;
 use strum::IntoEnumIterator;
 
-use crate::format::OutputFormat;
-
-use self::format::FormatStyle;
+use crate::format::{FormatRadix, OutputFormat};
 
 #[macro_use]
 extern crate pest_derive;
@@ -92,8 +90,7 @@ fn script_evaluate(file_path: &str, config: &Config) {
     let lines = io::BufReader::new(file).lines();
 
     let mut ans = 0;
-    let mut of = format::OutputFormat::default();
-    of.set_format_style(*config.output_radix());
+    let mut of = OutputFormat::default().with_format_radix(*config.output_radix());
 
     for line in lines {
         let line = match line {
@@ -123,20 +120,19 @@ fn inline_evaluate(expr_str: &str, config: &Config, all_bases: bool) {
             expression::Command::Expr(expr) => match expression::eval::eval_expr(&expr, 0) {
                 Ok(ans) => {
                     if all_bases {
-                        for radix in FormatStyle::iter() {
+                        for radix in FormatRadix::iter() {
                             println!(
                                 "{:>21}: {}",
                                 radix.name(),
-                                format::fmt(ans, &OutputFormat::from_format_style(radix))
+                                OutputFormat::default().with_format_radix(radix).fmt(ans),
                             );
                         }
                     } else {
                         println!(
                             "{}",
-                            format::fmt(
-                                ans,
-                                &OutputFormat::from_format_style(*config.output_radix())
-                            )
+                            OutputFormat::default()
+                                .with_format_radix(*config.output_radix())
+                                .fmt(ans),
                         );
                     }
                 }
@@ -175,8 +171,7 @@ fn interactive(config: &Config) {
         println!("No existing history!\n");
     }
 
-    let mut of = format::OutputFormat::default();
-    of.set_format_style(*config.output_radix());
+    let mut of = OutputFormat::default().with_format_radix(*config.output_radix());
     let mut ans = 0;
     loop {
         match rl.readline(config.prompt()) {
@@ -216,15 +211,15 @@ fn proccess_command(line: String, ans: &mut i64, of: &mut OutputFormat) -> Resul
         expression::Command::Expr(expr) => {
             let val = expression::eval::eval_expr(&expr, *ans)?;
             *ans = val;
-            println!("{}", format::fmt(val, of));
+            println!("{}", of.fmt(val));
         }
         expression::Command::Set(set) => {
             if set[0] == "of" {
                 match set[1].as_str() {
-                    "hex" => of.set_format_style(format::FormatStyle::Hex),
-                    "dec" => of.set_format_style(format::FormatStyle::Decimal),
-                    "oct" => of.set_format_style(format::FormatStyle::Octal),
-                    "bin" => of.set_format_style(format::FormatStyle::Binary),
+                    "hex" => of.set_format_radix(FormatRadix::Hex),
+                    "dec" => of.set_format_radix(FormatRadix::Decimal),
+                    "oct" => of.set_format_radix(FormatRadix::Octal),
+                    "bin" => of.set_format_radix(FormatRadix::Binary),
                     _ => {
                         return Err(error::CorkError::InvalidValueForKey {
                             key: set[0].clone(),
