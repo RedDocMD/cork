@@ -88,12 +88,14 @@ mod test {
     fn test_config_deserialize() {
         let config_str = "prompt: $
 header: false
-output_radix: Octal";
+output_radix: Octal
+punctuate_output: true";
         let config: Config = serde_yaml::from_str(config_str).unwrap();
         let expected_config = Config {
             prompt: String::from("$"),
             header: false,
             output_radix: FormatRadix::Octal,
+            punctuate_output: true,
         };
         assert_eq!(config, expected_config);
     }
@@ -107,6 +109,7 @@ output_radix: Octal";
             prompt: String::from("$"),
             header: default_header(),
             output_radix: FormatRadix::Octal,
+            punctuate_output: false,
         };
         assert_eq!(config, expected_config);
     }
@@ -119,6 +122,7 @@ output_radix: Octal";
             prompt: default_prompt(),
             header: default_header(),
             output_radix: FormatRadix::default(),
+            punctuate_output: false,
         };
         assert_eq!(config, expected_config);
     }
