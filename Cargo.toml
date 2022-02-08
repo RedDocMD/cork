@@ -20,7 +20,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 getset = "0.1.2"
 anyhow = "1"
-clap = { version = "3.0.14", features = ["derive"] }
+clap = { version = "3.0.14", features = ["cargo", "derive"] }
 thiserror = "1.0.30"
 strum = { version = "0.23.0", features = ["derive"] }
 colored = "2.0.0"

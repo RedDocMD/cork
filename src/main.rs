@@ -9,7 +9,10 @@ use std::path::PathBuf;
 use std::process::exit;
 use strum::IntoEnumIterator;
 
-use crate::format::{FormatRadix, OutputFormat};
+use crate::{
+    format::{FormatRadix, OutputFormat},
+    options::Options,
+};
 
 #[macro_use]
 extern crate lazy_static;
@@ -18,52 +21,19 @@ mod config;
 mod error;
 mod expression;
 mod format;
-
-#[derive(Parser, Debug)]
-#[clap(author, version, about)]
-struct Options {
-    #[clap(
-        short,
-        long,
-        value_name = "EXPR",
-        help = "evaluate <EXPR> and print it"
-    )]
-    expr: Option<String>,
-
-    #[clap(
-        short,
-        long,
-        help = "prints the output in all the bases (works only in expr evaluation mode)"
-    )]
-    all_bases: bool,
-
-    #[clap(
-        short,
-        long,
-        value_name = "PATH",
-        help = "load config file from <PATH>"
-    )]
-    config: Option<String>,
-
-    #[clap(
-        short,
-        long,
-        value_name = "PATH",
-        help = "load script file from <PATH> to run line by line"
-    )]
-    file: Option<String>,
-}
+mod options;
 
 fn main() {
     let options = Options::parse();
 
-    let config = match read_config(options.config.as_ref()) {
+    let mut config = match read_config(options.config.as_ref()) {
         Ok(conf) => conf,
         Err(err) => {
             eprintln!("Failed to parse config: {}", err);
             exit(1);
         }
     };
+    config.override_from_options(&options);
 
     if let Some(expr_str) = &options.expr {
         inline_evaluate(expr_str, &config, &options);
@@ -88,7 +58,9 @@ fn script_evaluate(file_path: &str, config: &Config) {
     let lines = io::BufReader::new(file).lines();
 
     let mut ans = 0;
-    let mut of = OutputFormat::default().with_format_radix(*config.output_radix());
+    let mut of = OutputFormat::default()
+        .with_format_radix(*config.output_radix())
+        .with_punctuate_number(*config.punctuate_output());
 
     for line in lines {
         let line = match line {
@@ -121,8 +93,11 @@ fn inline_evaluate(expr_str: &str, config: &Config, options: &Options) {
                         for radix in FormatRadix::iter() {
                             println!(
                                 "{:>21}: {}",
-                                radix.name(),
-                                OutputFormat::default().with_format_radix(radix).fmt(ans),
+                                radix,
+                                OutputFormat::default()
+                                    .with_format_radix(radix)
+                                    .with_punctuate_number(*config.punctuate_output())
+                                    .fmt(ans),
                             );
                         }
                     } else {
@@ -130,6 +105,7 @@ fn inline_evaluate(expr_str: &str, config: &Config, options: &Options) {
                             "{}",
                             OutputFormat::default()
                                 .with_format_radix(*config.output_radix())
+                                .with_punctuate_number(*config.punctuate_output())
                                 .fmt(ans),
                         );
                     }
@@ -169,7 +145,9 @@ fn interactive(config: &Config) {
         println!("No existing history!\n");
     }
 
-    let mut of = OutputFormat::default().with_format_radix(*config.output_radix());
+    let mut of = OutputFormat::default()
+        .with_format_radix(*config.output_radix())
+        .with_punctuate_number(*config.punctuate_output());
     let mut ans = 0;
     loop {
         match rl.readline(config.prompt()) {

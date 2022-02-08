@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::format::FormatRadix;
+use crate::{format::FormatRadix, options::Options};
 use anyhow::Result as AResult;
 use getset::Getters;
 use serde::Deserialize;
@@ -20,6 +20,17 @@ pub struct Config {
 
     #[serde(default)]
     output_radix: FormatRadix,
+
+    #[serde(default)]
+    punctuate_output: bool,
+}
+
+impl Config {
+    pub fn override_from_options(&mut self, options: &Options) {
+        if options.punctuate_output {
+            self.punctuate_output = true;
+        }
+    }
 }
 
 fn default_prompt() -> String {
