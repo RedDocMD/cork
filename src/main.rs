@@ -94,7 +94,7 @@ fn inline_evaluate(expr_str: &str, config: &Config, options: &Options) {
                         for radix in FormatRadix::iter() {
                             println!(
                                 "{:>21}: {}",
-                                radix,
+                                radix.to_string(),
                                 OutputFormat::default()
                                     .with_format_radix(radix)
                                     .with_punctuate_number(*config.punctuate_output())
