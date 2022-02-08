@@ -7,9 +7,10 @@ pub struct Options {
         short,
         long,
         value_name = "EXPR",
-        help = "evaluate <EXPR> and print it"
+        help = "evaluate <EXPR> and print it",
+        min_values = 1
     )]
-    pub expr: Option<String>,
+    pub expr: Option<Vec<String>>,
 
     #[clap(
         short,

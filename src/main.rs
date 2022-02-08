@@ -35,8 +35,9 @@ fn main() {
     };
     config.override_from_options(&options);
 
-    if let Some(expr_str) = &options.expr {
-        inline_evaluate(expr_str, &config, &options);
+    if let Some(expr_vec) = &options.expr {
+        let expr_str = expr_vec.join(" ");
+        inline_evaluate(&expr_str, &config, &options);
     } else if let Some(file_path) = &options.file {
         script_evaluate(file_path, &config);
     } else {
