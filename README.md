@@ -16,6 +16,7 @@
     - [Set directives](#set-directives)
     - [Inline evaluation](#inline-evaluation)
     - [Script evaluation](#script-evaluation)
+    - [Punctuation](#punctuation)
   - [Configuration](#configuration)
     - [Locations](#locations)
     - [Keys](#keys)
@@ -112,11 +113,15 @@ As of now, Cork has the following keys:
 
 ### Inline evaluation
 
-With the `-e/--expr` flag, Cork accepts an expression to evaluate. The expression cannot be a set-directive. The expression is evaluated and the answer is printed in the default output radix.
+With the `-e/--expr` flag, Cork accepts an expression to evaluate. The expression cannot be a set-directive. The expression is evaluated and the answer is printed in the default output radix. The `-a/--all-bases` flag prints the result in all the four bases.
 
 ### Script evaluation
 
 With the `-f/--file` flag, Cork accepts the path of a file. This file will be executed as a script from top to bottom. Any command allowed in the REPL is allowed in the script. The script will print its outputs to `stdout` and its errors to `stderr`.
+
+### Punctuation
+
+The `-p/--punctuate-output` flag punctuates the output numbers with underscores. The same can be done with a key of the same name in the config file. The presence of this flag overrides the option set in the config file.
 
 ## Configuration
 
@@ -134,11 +139,12 @@ Otherwise, Cork looks at the following places for a config file (in the specifie
 
 ### Keys
 
-| Key           | Possible Values             | Default | Purpose                                      |
-| ------------- | --------------------------- | ------- | -------------------------------------------- |
-| prompt        | `string`                    | cork>   | Prompt to show at the beginning of each line |
-| default_radix | Decimal, Hex, Octal, Binary | Hex     | Default radix for the output format          |
-| header        | `bool`                      | true    | Show the header at startup                   |
+| Key              | Possible Values             | Default | Purpose                                      |
+| ---------------- | --------------------------- | ------- | -------------------------------------------- |
+| prompt           | `string`                    | cork>   | Prompt to show at the beginning of each line |
+| default_radix    | Decimal, Hex, Octal, Binary | Hex     | Default radix for the output format          |
+| header           | `bool`                      | true    | Show the header at startup                   |
+| punctuate_output | `bool`                      | false   | Punctuate output numbers with underscores    |
 
 ## LICENSE
 
