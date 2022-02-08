@@ -6,6 +6,7 @@ use std::{
 
 use crate::{format::FormatRadix, options::Options};
 use anyhow::Result as AResult;
+use colored::Colorize;
 use getset::Getters;
 use serde::Deserialize;
 
@@ -34,7 +35,7 @@ impl Config {
 }
 
 fn default_prompt() -> String {
-    String::from("cork> ")
+    "cork> ".yellow().to_string()
 }
 
 fn default_header() -> bool {
