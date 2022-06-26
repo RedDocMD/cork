@@ -35,6 +35,7 @@ pub enum Op {
     Rem,
     And,
     Or,
+    Xor,
     LShift,
     RShift,
 }
@@ -54,6 +55,7 @@ impl FromStr for Op {
             "%" => Ok(Op::Rem),
             "&" => Ok(Op::And),
             "|" => Ok(Op::Or),
+            "^" => Ok(Op::Xor),
             "<<" => Ok(Op::LShift),
             ">>" => Ok(Op::RShift),
             _ => Err(ParseOpError(format!("{} is not an Op", s))),
@@ -135,7 +137,7 @@ lazy_static! {
         PrecClimber::new(vec![
             Operator::new(lshift, Left) | Operator::new(rshift, Left),
             Operator::new(add, Left) | Operator::new(subtract, Left),
-            Operator::new(multiply, Left) | Operator::new(divide, Left) | Operator::new(rem, Left) | Operator::new(and, Left) | Operator::new(or, Left),
+            Operator::new(multiply, Left) | Operator::new(divide, Left) | Operator::new(rem, Left) | Operator::new(and, Left) | Operator::new(or, Left) | Operator::new(xor, Left),
         ])
     };
 }
@@ -189,6 +191,7 @@ fn parse_expr(expression: Pairs<Rule>) -> Expr {
                 Rule::rem => Op::Rem,
                 Rule::and => Op::And,
                 Rule::or => Op::Or,
+                Rule::xor => Op::Xor,
                 Rule::lshift => Op::LShift,
                 Rule::rshift => Op::RShift,
                 _ => unreachable!(),
@@ -217,6 +220,7 @@ pub mod eval {
                     Op::Mul => Ok(left * right),
                     Op::And => Ok(left & right),
                     Op::Or => Ok(left | right),
+                    Op::Xor => Ok(left ^ right),
                     Op::LShift => Ok(left << right),
                     Op::RShift => Ok(left >> right),
                     Op::Div => {
@@ -328,9 +332,14 @@ mod test {
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0010),
             _ => panic!("Should have parsed to an expr"),
         }
-        let expr11_str = "0b0011 | 0b0110";
-        match parse_line(expr11_str).unwrap(){
+        let expr12_str = "0b0011 | 0b0110";
+        match parse_line(expr12_str).unwrap(){
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0111),
+            _ => panic!("Should have parsed to an expr"),
+        }
+        let expr13_str = "0b0011 ^ 0b0101";
+        match parse_line(expr13_str).unwrap(){
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0110),
             _ => panic!("Should have parsed to an expr"),
         }
     }

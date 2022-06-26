@@ -5,7 +5,7 @@ oct = @{ "0o" ~ ("_" | ASCII_OCT_DIGIT)+ }
 bin = @{ "0b" ~ ("_" | ASCII_BIN_DIGIT)+ }
 ans = { "ans" }
 
-operation = _{ add | subtract | multiply | divide | rem | and | or | lshift | rshift }
+operation = _{ add | subtract | multiply | divide | rem | and | or | xor | lshift | rshift }
     add      = { "+" }
     subtract = { "-" }
     multiply = { "*" }
@@ -13,6 +13,7 @@ operation = _{ add | subtract | multiply | divide | rem | and | or | lshift | rs
     rem      = { "%" }
     and      = { "&" }
     or       = { "|" }
+    xor      = { "^" }
     lshift   = { "<<" }
     rshift   = { ">>" }
 
