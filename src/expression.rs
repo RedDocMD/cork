@@ -134,10 +134,19 @@ lazy_static! {
         use pest::prec_climber::*;
         use Rule::*;
 
+        // This vector passed into PrecClimber defines operator
+        // precedence / priority. a low-order position within the 
+        // vector (position 0, 1, etc) indicates a low priority, 
+        // while a high-order position indicates a high priority. 
+        // The operator in the last position of the vector therefore
+        // has the highest priority.
         PrecClimber::new(vec![
+            Operator::new(or, Left),
+            Operator::new(xor, Left),
+            Operator::new(and, Left),
             Operator::new(lshift, Left) | Operator::new(rshift, Left),
             Operator::new(add, Left) | Operator::new(subtract, Left),
-            Operator::new(multiply, Left) | Operator::new(divide, Left) | Operator::new(rem, Left) | Operator::new(and, Left) | Operator::new(or, Left) | Operator::new(xor, Left),
+            Operator::new(multiply, Left) | Operator::new(divide, Left) | Operator::new(rem, Left),
         ])
     };
 }
@@ -184,6 +193,7 @@ fn parse_expr(expression: Pairs<Rule>) -> Expr {
         },
         |lhs: Expr, op: Pair<Rule>, rhs: Expr| {
             let op = match op.as_rule() {
+                // note that order does not matter here
                 Rule::add => Op::Add,
                 Rule::subtract => Op::Sub,
                 Rule::multiply => Op::Mul,
@@ -215,12 +225,13 @@ pub mod eval {
                 let left = eval_expr(expr.left.as_ref(), ans)?;
                 let right = eval_expr(expr.right.as_ref(), ans)?;
                 match expr.op {
+                    // note that order does not matter here
                     Op::Add => Ok(left + right),
                     Op::Sub => Ok(left - right),
                     Op::Mul => Ok(left * right),
                     Op::And => Ok(left & right),
-                    Op::Or => Ok(left | right),
                     Op::Xor => Ok(left ^ right),
+                    Op::Or => Ok(left | right),
                     Op::LShift => Ok(left << right),
                     Op::RShift => Ok(left >> right),
                     Op::Div => {
@@ -355,6 +366,12 @@ mod test {
         let expr15_str = "(((0b0011 ^ 0b0101) * 2) & 0b0101) + 1";
         match parse_line(expr15_str).unwrap(){
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 5),
+            _ => panic!("Should have parsed to an expr"),
+        }
+        // testing operator precedence / priority with bitwise ops
+        let expr16_str = "0b0100 ^ 0b0000 | 0b0101 * 2 & 0b0101 + 1";
+        match parse_line(expr16_str).unwrap(){
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 6),
             _ => panic!("Should have parsed to an expr"),
         }
     }
