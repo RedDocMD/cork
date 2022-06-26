@@ -327,19 +327,34 @@ mod test {
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 94),
             _ => panic!("Should have parsed to an expr"),
         };
+        // testing just the bitwise AND
         let expr11_str = "0b0011 & 0b0110";
         match parse_line(expr11_str).unwrap(){
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0010),
             _ => panic!("Should have parsed to an expr"),
         }
+        // testing just the bitwise OR
         let expr12_str = "0b0011 | 0b0110";
         match parse_line(expr12_str).unwrap(){
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0111),
             _ => panic!("Should have parsed to an expr"),
         }
+        // testing just the bitwise XOR
         let expr13_str = "0b0011 ^ 0b0101";
         match parse_line(expr13_str).unwrap(){
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0110),
+            _ => panic!("Should have parsed to an expr"),
+        }
+        // testing all of the bitwise operators together
+        let expr14_str = "((0b0011 ^ 0b0101) & 0b0011) | 0b0111";
+        match parse_line(expr14_str).unwrap(){
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0111),
+            _ => panic!("Should have parsed to an expr"),
+        }
+        // mixing bitwise and "normal" operators
+        let expr15_str = "(((0b0011 ^ 0b0101) * 2) & 0b0101) + 1";
+        match parse_line(expr15_str).unwrap(){
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 5),
             _ => panic!("Should have parsed to an expr"),
         }
     }
