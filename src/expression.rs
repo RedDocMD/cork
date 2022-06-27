@@ -33,6 +33,9 @@ pub enum Op {
     Mul,
     Div,
     Rem,
+    And,
+    Or,
+    Xor,
     LShift,
     RShift,
 }
@@ -50,6 +53,9 @@ impl FromStr for Op {
             "*" => Ok(Op::Mul),
             "/" => Ok(Op::Div),
             "%" => Ok(Op::Rem),
+            "&" => Ok(Op::And),
+            "|" => Ok(Op::Or),
+            "^" => Ok(Op::Xor),
             "<<" => Ok(Op::LShift),
             ">>" => Ok(Op::RShift),
             _ => Err(ParseOpError(format!("{} is not an Op", s))),
@@ -128,7 +134,16 @@ lazy_static! {
         use pest::prec_climber::*;
         use Rule::*;
 
+        // This vector passed into PrecClimber defines operator
+        // precedence / priority. a low-order position within the 
+        // vector (position 0, 1, etc) indicates a low priority, 
+        // while a high-order position indicates a high priority. 
+        // The operator in the last position of the vector therefore
+        // has the highest priority.
         PrecClimber::new(vec![
+            Operator::new(or, Left),
+            Operator::new(xor, Left),
+            Operator::new(and, Left),
             Operator::new(lshift, Left) | Operator::new(rshift, Left),
             Operator::new(add, Left) | Operator::new(subtract, Left),
             Operator::new(multiply, Left) | Operator::new(divide, Left) | Operator::new(rem, Left),
@@ -178,11 +193,15 @@ fn parse_expr(expression: Pairs<Rule>) -> Expr {
         },
         |lhs: Expr, op: Pair<Rule>, rhs: Expr| {
             let op = match op.as_rule() {
+                // note that order does not matter here
                 Rule::add => Op::Add,
                 Rule::subtract => Op::Sub,
                 Rule::multiply => Op::Mul,
                 Rule::divide => Op::Div,
                 Rule::rem => Op::Rem,
+                Rule::and => Op::And,
+                Rule::or => Op::Or,
+                Rule::xor => Op::Xor,
                 Rule::lshift => Op::LShift,
                 Rule::rshift => Op::RShift,
                 _ => unreachable!(),
@@ -206,9 +225,13 @@ pub mod eval {
                 let left = eval_expr(expr.left.as_ref(), ans)?;
                 let right = eval_expr(expr.right.as_ref(), ans)?;
                 match expr.op {
+                    // note that order does not matter here
                     Op::Add => Ok(left + right),
                     Op::Sub => Ok(left - right),
                     Op::Mul => Ok(left * right),
+                    Op::And => Ok(left & right),
+                    Op::Xor => Ok(left ^ right),
+                    Op::Or => Ok(left | right),
                     Op::LShift => Ok(left << right),
                     Op::RShift => Ok(left >> right),
                     Op::Div => {
@@ -315,6 +338,42 @@ mod test {
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 94),
             _ => panic!("Should have parsed to an expr"),
         };
+        // testing just the bitwise AND
+        let expr11_str = "0b0011 & 0b0110";
+        match parse_line(expr11_str).unwrap(){
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0010),
+            _ => panic!("Should have parsed to an expr"),
+        }
+        // testing just the bitwise OR
+        let expr12_str = "0b0011 | 0b0110";
+        match parse_line(expr12_str).unwrap(){
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0111),
+            _ => panic!("Should have parsed to an expr"),
+        }
+        // testing just the bitwise XOR
+        let expr13_str = "0b0011 ^ 0b0101";
+        match parse_line(expr13_str).unwrap(){
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0110),
+            _ => panic!("Should have parsed to an expr"),
+        }
+        // testing all of the bitwise operators together
+        let expr14_str = "((0b0011 ^ 0b0101) & 0b0011) | 0b0111";
+        match parse_line(expr14_str).unwrap(){
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0111),
+            _ => panic!("Should have parsed to an expr"),
+        }
+        // mixing bitwise and "normal" operators
+        let expr15_str = "(((0b0011 ^ 0b0101) * 2) & 0b0101) + 1";
+        match parse_line(expr15_str).unwrap(){
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 5),
+            _ => panic!("Should have parsed to an expr"),
+        }
+        // testing operator precedence / priority with bitwise ops
+        let expr16_str = "0b0100 ^ 0b0000 | 0b0101 * 2 & 0b0101 + 1";
+        match parse_line(expr16_str).unwrap(){
+            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 6),
+            _ => panic!("Should have parsed to an expr"),
+        }
     }
 
     #[test]
