@@ -52,6 +52,9 @@ impl Display for FormatRadix {
 
 fn uint_to_chars_radix(mut num: u64, radix: u32) -> Vec<char> {
     let mut chars = Vec::new();
+    if num == 0 {
+        chars.push('0');
+    }
     while num > 0 {
         let d = (num % radix as u64) as u32;
         chars.push(char::from_digit(d, radix).unwrap());
