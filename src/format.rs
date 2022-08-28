@@ -119,7 +119,7 @@ impl OutputFormat {
             FormatRadix::Decimal => "",
             FormatRadix::Hex => "0x",
             FormatRadix::Octal => "0o",
-            FormatRadix::Binary => "Ob",
+            FormatRadix::Binary => "0b",
         };
 
         if negative {
