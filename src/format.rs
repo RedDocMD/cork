@@ -103,6 +103,11 @@ impl OutputFormat {
         self.radix = radix;
     }
 
+    #[cfg(test)]
+    fn set_punctuate_number(&mut self, punctuate_number: bool) {
+        self.punctuate_number = punctuate_number;
+    }
+
     pub fn fmt(&self, num: i64) -> String {
         let (abs_num, negative) = if num < 0 {
             (-num as u64, true)
@@ -126,6 +131,32 @@ impl OutputFormat {
             format!("-{}{}", prefix, abs_num_str)
         } else {
             format!("{}{}", prefix, abs_num_str)
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_0_fmt() {
+        let cases = [
+            (FormatRadix::Hex, "0x0"),
+            (FormatRadix::Octal, "0o0"),
+            (FormatRadix::Binary, "0b0"),
+            (FormatRadix::Decimal, "0"),
+        ];
+
+        for (radix, output) in cases {
+            let mut of = OutputFormat::default().with_format_radix(radix);
+
+            // Regardless of punctuation, output should be the same
+            of.set_punctuate_number(false);
+            assert_eq!(of.fmt(0), output);
+
+            of.set_punctuate_number(true);
+            assert_eq!(of.fmt(0), output);
         }
     }
 }
