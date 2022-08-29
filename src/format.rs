@@ -103,11 +103,6 @@ impl OutputFormat {
         self.radix = radix;
     }
 
-    #[cfg(test)]
-    fn set_punctuate_number(&mut self, punctuate_number: bool) {
-        self.punctuate_number = punctuate_number;
-    }
-
     pub fn fmt(&self, num: i64) -> String {
         let (abs_num, negative) = if num < 0 {
             (-num as u64, true)
@@ -152,10 +147,10 @@ mod test {
             let mut of = OutputFormat::default().with_format_radix(radix);
 
             // Regardless of punctuation, output should be the same
-            of.set_punctuate_number(false);
+            of = of.with_punctuate_number(false);
             assert_eq!(of.fmt(0), output);
 
-            of.set_punctuate_number(true);
+            of = of.with_punctuate_number(true);
             assert_eq!(of.fmt(0), output);
         }
     }
