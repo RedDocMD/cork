@@ -52,6 +52,9 @@ impl Display for FormatRadix {
 
 fn uint_to_chars_radix(mut num: u64, radix: u32) -> Vec<char> {
     let mut chars = Vec::new();
+    if num == 0 {
+        chars.push('0');
+    }
     while num > 0 {
         let d = (num % radix as u64) as u32;
         chars.push(char::from_digit(d, radix).unwrap());
@@ -116,13 +119,39 @@ impl OutputFormat {
             FormatRadix::Decimal => "",
             FormatRadix::Hex => "0x",
             FormatRadix::Octal => "0o",
-            FormatRadix::Binary => "Ob",
+            FormatRadix::Binary => "0b",
         };
 
         if negative {
             format!("-{}{}", prefix, abs_num_str)
         } else {
             format!("{}{}", prefix, abs_num_str)
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_0_fmt() {
+        let cases = [
+            (FormatRadix::Hex, "0x0"),
+            (FormatRadix::Octal, "0o0"),
+            (FormatRadix::Binary, "0b0"),
+            (FormatRadix::Decimal, "0"),
+        ];
+
+        for (radix, output) in cases {
+            let mut of = OutputFormat::default().with_format_radix(radix);
+
+            // Regardless of punctuation, output should be the same
+            of = of.with_punctuate_number(false);
+            assert_eq!(of.fmt(0), output);
+
+            of = of.with_punctuate_number(true);
+            assert_eq!(of.fmt(0), output);
         }
     }
 }
