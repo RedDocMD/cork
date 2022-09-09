@@ -75,7 +75,7 @@ fn script_evaluate(file_path: &str, config: &Config) {
             warranty();
             continue;
         }
-        let _ = match proccess_command(line, &mut ans, &mut of) {
+        match proccess_command(line, &mut ans, &mut of) {
             Ok(_) => continue,
             Err(e) => {
                 eprintln!("{}", e);
@@ -158,7 +158,7 @@ fn interactive(config: &Config) {
                     warranty();
                     continue;
                 }
-                let _ = match proccess_command(line, &mut ans, &mut of) {
+                match proccess_command(line, &mut ans, &mut of) {
                     Ok(_) => continue,
                     Err(e) => {
                         eprintln!("{}", e);
