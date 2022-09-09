@@ -90,7 +90,7 @@ fn inline_evaluate(expr_str: &str, config: &Config, options: &Options) {
         Ok(command) => match command {
             expression::Command::Expr(expr) => match expression::eval::eval_expr(&expr, 0) {
                 Ok(ans) => {
-                    if options.all_bases {
+                    if options.all {
                         for radix in FormatRadix::iter() {
                             println!(
                                 "{:>21}: {}",

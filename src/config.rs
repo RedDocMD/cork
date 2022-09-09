@@ -31,6 +31,16 @@ impl Config {
         if options.punctuate_output {
             self.punctuate_output = true;
         }
+
+        if options.hex {
+            self.output_radix = FormatRadix::Hex;
+        } else if options.dec {
+            self.output_radix = FormatRadix::Decimal;
+        } else if options.oct {
+            self.output_radix = FormatRadix::Octal;
+        } else if options.bin {
+            self.output_radix = FormatRadix::Binary;
+        }
     }
 }
 
