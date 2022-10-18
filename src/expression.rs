@@ -1,4 +1,5 @@
 use crate::error::CorkError;
+use crate::format::FormatRadix;
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::PrecClimber;
 use pest::Parser;
@@ -98,6 +99,36 @@ impl Index<usize> for SetDirective {
     }
 }
 
+/// A ConvDirective is a command of the form "to hex|dec|bin|oct|dec".
+#[derive(Debug, PartialEq, Eq)]
+pub struct ConvDirective {
+    expr: Expr,
+    radix: String
+}
+
+impl ConvDirective {
+    pub fn value(&self, ans: i64) -> Result<i64, CorkError> {
+        eval::eval_expr(&self.expr, ans)
+    }
+
+    pub fn radix(&self) -> Result<FormatRadix, CorkError> {
+        match self.radix.as_str() {
+            "hex" => Ok(FormatRadix::Hex),
+            "dec" => Ok(FormatRadix::Decimal),
+            "oct" => Ok(FormatRadix::Octal),
+            "bin" => Ok(FormatRadix::Binary),
+            _ => Err(CorkError::InvalidConversion(self.radix.clone())),
+        }
+    }
+
+}
+
+impl fmt::Display for ConvDirective {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "convert to {}", &self.radix)
+    }
+}
+
 /// A Command is a one line worth of input from the user.
 /// It can either be a SetDirective or an Expr.
 /// As an escape-hatch, there is also an empty command.
@@ -105,6 +136,7 @@ impl Index<usize> for SetDirective {
 pub enum Command {
     Expr(Expr),
     Set(SetDirective),
+    Convert(ConvDirective),
     Empty,
 }
 
@@ -124,6 +156,14 @@ fn parse_comm(pair: Pair<Rule>) -> Command {
         Rule::set_directive => Command::Set(SetDirective {
             args: pair.as_str().split(' ').skip(1).map(String::from).collect(),
         }),
+        Rule::tor_directive => {
+            let to_radix = pair.as_str().split(' ').map(String::from)
+                .collect::<Vec<String>>().pop().unwrap();
+            Command::Convert(ConvDirective {
+                expr: parse_expr(pair.into_inner()),
+                radix: to_radix,
+            })
+        },
         _ => unreachable!(),
     }
 }

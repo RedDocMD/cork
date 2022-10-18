@@ -103,6 +103,10 @@ impl OutputFormat {
         self.radix = radix;
     }
 
+    pub fn punctuate_number(&self) -> bool {
+        self.punctuate_number
+    }
+
     pub fn fmt(&self, num: i64) -> String {
         let (abs_num, negative) = if num < 0 {
             (-num as u64, true)

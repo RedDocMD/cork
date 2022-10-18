@@ -119,7 +119,20 @@ fn inline_evaluate(expr_str: &str, config: &Config, options: &Options) {
             expression::Command::Set(_) => {
                 eprintln!("Set directive not allowed in inline-expression");
                 exit(1);
-            }
+            },
+            expression::Command::Convert(conversion) => match conversion.value(0) {
+                Ok(ans) => {
+                    println!("{}", OutputFormat::default()
+                        .with_format_radix(conversion.radix().unwrap())
+                        .with_punctuate_number(*config.punctuate_output())
+                        .fmt(ans)
+                    );
+                }
+                Err(err) => {
+                    eprintln!("Failed to evaluate \"{}\": {}", expr_str, err);
+                    exit(1);
+                }
+            },
             expression::Command::Empty => {
                 println!("Empty expression!")
             }
@@ -207,6 +220,14 @@ fn proccess_command(line: String, ans: &mut i64, of: &mut OutputFormat) -> Resul
             } else {
                 return Err(error::CorkError::InvalidKey(set[0].clone()));
             }
+        }
+        expression::Command::Convert(conversion) => {
+            let val = conversion.value(*ans)?;
+            *ans = val;
+            println!("{}", OutputFormat::default()
+                .with_format_radix(conversion.radix()?)
+                .with_punctuate_number(of.punctuate_number())
+                .fmt(val));
         }
         expression::Command::Empty => println!(),
     };

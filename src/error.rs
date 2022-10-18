@@ -11,4 +11,6 @@ pub enum CorkError {
     InvalidKey(String),
     #[error("parsing error:\n{0}")]
     Parse(#[from] PestRuleError),
+    #[error("{0} is not a valid destination radix")]
+    InvalidConversion(String),
 }
