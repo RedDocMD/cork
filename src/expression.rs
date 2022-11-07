@@ -75,7 +75,9 @@ pub struct BinOpExpr {
 
 impl PartialEq for BinOpExpr {
     fn eq(&self, rhs: &Self) -> bool {
-        *self.left == *rhs.left && *self.right == *rhs.right && self.op == rhs.op
+        *self.left == *rhs.left
+            && *self.right == *rhs.right
+            && self.op == rhs.op
     }
 }
 
@@ -103,7 +105,7 @@ impl Index<usize> for SetDirective {
 #[derive(Debug, PartialEq, Eq)]
 pub struct ConvDirective {
     expr: Expr,
-    radix: FormatRadix
+    radix: FormatRadix,
 }
 
 impl ConvDirective {
@@ -153,9 +155,9 @@ fn parse_comm(pair: Pair<Rule>) -> Command {
             let radix_pair = pair.clone().into_inner().last().unwrap();
             Command::Convert(ConvDirective {
                 expr: parse_expr(pair.into_inner()),
-                radix: parse_radix(radix_pair)
+                radix: parse_radix(radix_pair),
             })
-        },
+        }
         _ => unreachable!(),
     }
 }
@@ -167,9 +169,9 @@ lazy_static! {
         use Rule::*;
 
         // This vector passed into PrecClimber defines operator
-        // precedence / priority. a low-order position within the 
-        // vector (position 0, 1, etc) indicates a low priority, 
-        // while a high-order position indicates a high priority. 
+        // precedence / priority. a low-order position within the
+        // vector (position 0, 1, etc) indicates a low priority,
+        // while a high-order position indicates a high priority.
         // The operator in the last position of the vector therefore
         // has the highest priority.
         PrecClimber::new(vec![
@@ -208,7 +210,7 @@ fn parse_radix(p: Pair<Rule>) -> FormatRadix {
         "oct" => FormatRadix::Octal,
         "hex" => FormatRadix::Hex,
         "bin" => FormatRadix::Binary,
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }
 
@@ -225,10 +227,18 @@ fn parse_expr(expression: Pairs<Rule>) -> Expr {
         expression,
         |pair: Pair<Rule>| match pair.as_rule() {
             Rule::number => parse_expr(pair.into_inner()),
-            Rule::dec => Expr::Num(parse_num(pair.as_str(), Radix::Dec).unwrap()),
-            Rule::hex => Expr::Num(parse_num(pair.as_str(), Radix::Hex).unwrap()),
-            Rule::oct => Expr::Num(parse_num(pair.as_str(), Radix::Oct).unwrap()),
-            Rule::bin => Expr::Num(parse_num(pair.as_str(), Radix::Bin).unwrap()),
+            Rule::dec => {
+                Expr::Num(parse_num(pair.as_str(), Radix::Dec).unwrap())
+            }
+            Rule::hex => {
+                Expr::Num(parse_num(pair.as_str(), Radix::Hex).unwrap())
+            }
+            Rule::oct => {
+                Expr::Num(parse_num(pair.as_str(), Radix::Oct).unwrap())
+            }
+            Rule::bin => {
+                Expr::Num(parse_num(pair.as_str(), Radix::Bin).unwrap())
+            }
             Rule::ans => Expr::Ans,
             Rule::expr => parse_expr(pair.into_inner()),
             _ => unreachable!(),
@@ -278,14 +288,18 @@ pub mod eval {
                     Op::RShift => Ok(left >> right),
                     Op::Div => {
                         if right == 0 {
-                            Err(CorkError::Eval(String::from("Cannot divide by 0")))
+                            Err(CorkError::Eval(String::from(
+                                "Cannot divide by 0",
+                            )))
                         } else {
                             Ok(left / right)
                         }
                     }
                     Op::Rem => {
                         if right == 0 {
-                            Err(CorkError::Eval(String::from("Cannot divide by 0")))
+                            Err(CorkError::Eval(String::from(
+                                "Cannot divide by 0",
+                            )))
                         } else {
                             Ok(left % right)
                         }
@@ -347,7 +361,9 @@ mod test {
         };
         let expr4_str = "6-57*(18+4/73)+38 *  124";
         match parse_line(expr4_str).unwrap() {
-            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 3692),
+            Command::Expr(expr) => {
+                assert_eq!(eval_expr(&expr, 0).unwrap(), 3692)
+            }
             _ => panic!("Should have parsed to an expr"),
         };
         let expr5_str = "2 + (((7 * 2) - 4) / 2) + 8 * 9 / 4";
@@ -372,7 +388,9 @@ mod test {
         };
         let expr9_str = "3 * 512 >> 4 - 2";
         match parse_line(expr9_str).unwrap() {
-            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 384),
+            Command::Expr(expr) => {
+                assert_eq!(eval_expr(&expr, 0).unwrap(), 384)
+            }
             _ => panic!("Should have parsed to an expr"),
         };
         let expr10_str = "3 * (512 >> 4) - 2";
@@ -382,37 +400,45 @@ mod test {
         };
         // testing just the bitwise AND
         let expr11_str = "0b0011 & 0b0110";
-        match parse_line(expr11_str).unwrap(){
-            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0010),
+        match parse_line(expr11_str).unwrap() {
+            Command::Expr(expr) => {
+                assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0010)
+            }
             _ => panic!("Should have parsed to an expr"),
         }
         // testing just the bitwise OR
         let expr12_str = "0b0011 | 0b0110";
-        match parse_line(expr12_str).unwrap(){
-            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0111),
+        match parse_line(expr12_str).unwrap() {
+            Command::Expr(expr) => {
+                assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0111)
+            }
             _ => panic!("Should have parsed to an expr"),
         }
         // testing just the bitwise XOR
         let expr13_str = "0b0011 ^ 0b0101";
-        match parse_line(expr13_str).unwrap(){
-            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0110),
+        match parse_line(expr13_str).unwrap() {
+            Command::Expr(expr) => {
+                assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0110)
+            }
             _ => panic!("Should have parsed to an expr"),
         }
         // testing all of the bitwise operators together
         let expr14_str = "((0b0011 ^ 0b0101) & 0b0011) | 0b0111";
-        match parse_line(expr14_str).unwrap(){
-            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0111),
+        match parse_line(expr14_str).unwrap() {
+            Command::Expr(expr) => {
+                assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0111)
+            }
             _ => panic!("Should have parsed to an expr"),
         }
         // mixing bitwise and "normal" operators
         let expr15_str = "(((0b0011 ^ 0b0101) * 2) & 0b0101) + 1";
-        match parse_line(expr15_str).unwrap(){
+        match parse_line(expr15_str).unwrap() {
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 5),
             _ => panic!("Should have parsed to an expr"),
         }
         // testing operator precedence / priority with bitwise ops
         let expr16_str = "0b0100 ^ 0b0000 | 0b0101 * 2 & 0b0101 + 1";
-        match parse_line(expr16_str).unwrap(){
+        match parse_line(expr16_str).unwrap() {
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 6),
             _ => panic!("Should have parsed to an expr"),
         }
@@ -437,7 +463,10 @@ mod test {
     #[test]
     fn oct_parse() {
         let oct_str1 = "0o345";
-        assert_eq!(parse_line(oct_str1).unwrap(), Command::Expr(Expr::Num(229)));
+        assert_eq!(
+            parse_line(oct_str1).unwrap(),
+            Command::Expr(Expr::Num(229))
+        );
         let oct_str2 = "0o1232344";
         assert_eq!(
             parse_line(oct_str2).unwrap(),
@@ -455,9 +484,15 @@ mod test {
         let bin_str1 = "0b1010";
         assert_eq!(parse_line(bin_str1).unwrap(), Command::Expr(Expr::Num(10)));
         let bin_str1 = "0b10100101";
-        assert_eq!(parse_line(bin_str1).unwrap(), Command::Expr(Expr::Num(165)));
+        assert_eq!(
+            parse_line(bin_str1).unwrap(),
+            Command::Expr(Expr::Num(165))
+        );
         let bin_str3 = "0b10_10_01____01";
-        assert_eq!(parse_line(bin_str3).unwrap(), Command::Expr(Expr::Num(165)));
+        assert_eq!(
+            parse_line(bin_str3).unwrap(),
+            Command::Expr(Expr::Num(165))
+        );
     }
 
     #[test]
