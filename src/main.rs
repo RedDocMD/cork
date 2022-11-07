@@ -123,7 +123,7 @@ fn inline_evaluate(expr_str: &str, config: &Config, options: &Options) {
             expression::Command::Convert(conversion) => match conversion.value(0) {
                 Ok(ans) => {
                     println!("{}", OutputFormat::default()
-                        .with_format_radix(conversion.radix().unwrap())
+                        .with_format_radix(conversion.radix())
                         .with_punctuate_number(*config.punctuate_output())
                         .fmt(ans)
                     );
@@ -225,7 +225,7 @@ fn proccess_command(line: String, ans: &mut i64, of: &mut OutputFormat) -> Resul
             let val = conversion.value(*ans)?;
             *ans = val;
             println!("{}", OutputFormat::default()
-                .with_format_radix(conversion.radix()?)
+                .with_format_radix(conversion.radix())
                 .with_punctuate_number(of.punctuate_number())
                 .fmt(val));
         }

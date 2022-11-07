@@ -103,7 +103,7 @@ impl Index<usize> for SetDirective {
 #[derive(Debug, PartialEq, Eq)]
 pub struct ConvDirective {
     expr: Expr,
-    radix: String
+    radix: FormatRadix
 }
 
 impl ConvDirective {
@@ -111,16 +111,9 @@ impl ConvDirective {
         eval::eval_expr(&self.expr, ans)
     }
 
-    pub fn radix(&self) -> Result<FormatRadix, CorkError> {
-        match self.radix.as_str() {
-            "hex" => Ok(FormatRadix::Hex),
-            "dec" => Ok(FormatRadix::Decimal),
-            "oct" => Ok(FormatRadix::Octal),
-            "bin" => Ok(FormatRadix::Binary),
-            _ => Err(CorkError::InvalidConversion(self.radix.clone())),
-        }
+    pub fn radix(&self) -> FormatRadix {
+        self.radix
     }
-
 }
 
 impl fmt::Display for ConvDirective {
@@ -157,11 +150,10 @@ fn parse_comm(pair: Pair<Rule>) -> Command {
             args: pair.as_str().split(' ').skip(1).map(String::from).collect(),
         }),
         Rule::tor_directive => {
-            let to_radix = pair.as_str().split(' ').map(String::from)
-                .collect::<Vec<String>>().pop().unwrap();
+            let radix_pair = pair.clone().into_inner().last().unwrap();
             Command::Convert(ConvDirective {
                 expr: parse_expr(pair.into_inner()),
-                radix: to_radix,
+                radix: parse_radix(radix_pair)
             })
         },
         _ => unreachable!(),
@@ -207,6 +199,16 @@ impl Radix {
             Radix::Dec => 10,
             Radix::Hex => 16,
         }
+    }
+}
+
+fn parse_radix(p: Pair<Rule>) -> FormatRadix {
+    match p.as_str() {
+        "dec" => FormatRadix::Decimal,
+        "oct" => FormatRadix::Octal,
+        "hex" => FormatRadix::Hex,
+        "bin" => FormatRadix::Binary,
+        _ => unreachable!()
     }
 }
 
