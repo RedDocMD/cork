@@ -137,7 +137,11 @@ pub enum Command {
 /// parse_line takes in a user input, and parses it to a valid Command
 /// or results in a parse error.
 pub fn parse_line<T: AsRef<str>>(line: T) -> Result<Command, CorkError> {
-    let comm = CommandParser::parse(Rule::line, line.as_ref())?.next();
+    let mut pairs = match CommandParser::parse(Rule::line, line.as_ref()) {
+        Ok(p) => p,
+        Err(e) => return Err(CorkError::Parse(Box::new(e))),
+    };
+    let comm = pairs.next();
     if comm.is_none() {
         return Ok(Command::Empty);
     }
@@ -527,21 +531,21 @@ mod test {
 
         let expr5_str = "(5 + 6) * 2 to nonex";
         let result = parse_line(expr5_str).unwrap_err();
-        let expected = CorkError::Parse(PestError::new_from_pos(
+        let expected = CorkError::Parse(Box::new(PestError::new_from_pos(
             PestVariant::ParsingError {
                 positives: vec![Rule::radix],
                 negatives: vec![],
             },
             Position::new(expr5_str, 15).unwrap(),
-        ));
+        )));
 
-        let not_expected = CorkError::Parse(PestError::new_from_pos(
+        let not_expected = CorkError::Parse(Box::new(PestError::new_from_pos(
             PestVariant::ParsingError {
                 positives: vec![Rule::EOI],
                 negatives: vec![],
             },
             Position::new(expr5_str, 18).unwrap(),
-        ));
+        )));
 
         // Checks error on non-existent radix, must return a wrong radix error
         assert_eq!(expected, result);
@@ -551,21 +555,21 @@ mod test {
 
         let expr6_str = "(5 + 6) * 2 to decimal";
         let result = parse_line(expr6_str).unwrap_err();
-        let expected = CorkError::Parse(PestError::new_from_pos(
+        let expected = CorkError::Parse(Box::new(PestError::new_from_pos(
             PestVariant::ParsingError {
                 positives: vec![Rule::EOI],
                 negatives: vec![],
             },
             Position::new(expr6_str, 18).unwrap(),
-        ));
+        )));
 
-        let not_expected = CorkError::Parse(PestError::new_from_pos(
+        let not_expected = CorkError::Parse(Box::new(PestError::new_from_pos(
             PestVariant::ParsingError {
                 positives: vec![Rule::radix],
                 negatives: vec![],
             },
             Position::new(expr6_str, 15).unwrap(),
-        ));
+        )));
 
         // Checks error on a missing EOI after the radix, must return an 'expected EOI' error
         assert_eq!(expected, result);
