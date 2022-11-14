@@ -1,4 +1,5 @@
 use crate::error::CorkError;
+use crate::format::FormatRadix;
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::PrecClimber;
 use pest::Parser;
@@ -74,7 +75,9 @@ pub struct BinOpExpr {
 
 impl PartialEq for BinOpExpr {
     fn eq(&self, rhs: &Self) -> bool {
-        *self.left == *rhs.left && *self.right == *rhs.right && self.op == rhs.op
+        *self.left == *rhs.left
+            && *self.right == *rhs.right
+            && self.op == rhs.op
     }
 }
 
@@ -98,6 +101,29 @@ impl Index<usize> for SetDirective {
     }
 }
 
+/// A ConvDirective is a command of the form "to hex|dec|bin|oct|dec".
+#[derive(Debug, PartialEq, Eq)]
+pub struct ConvDirective {
+    expr: Expr,
+    radix: FormatRadix,
+}
+
+impl ConvDirective {
+    pub fn value(&self, ans: i64) -> Result<i64, CorkError> {
+        eval::eval_expr(&self.expr, ans)
+    }
+
+    pub fn radix(&self) -> FormatRadix {
+        self.radix
+    }
+}
+
+impl fmt::Display for ConvDirective {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "convert to {}", &self.radix)
+    }
+}
+
 /// A Command is a one line worth of input from the user.
 /// It can either be a SetDirective or an Expr.
 /// As an escape-hatch, there is also an empty command.
@@ -105,6 +131,7 @@ impl Index<usize> for SetDirective {
 pub enum Command {
     Expr(Expr),
     Set(SetDirective),
+    Convert(ConvDirective),
     Empty,
 }
 
@@ -124,6 +151,13 @@ fn parse_comm(pair: Pair<Rule>) -> Command {
         Rule::set_directive => Command::Set(SetDirective {
             args: pair.as_str().split(' ').skip(1).map(String::from).collect(),
         }),
+        Rule::tor_directive => {
+            let radix_pair = pair.clone().into_inner().last().unwrap();
+            Command::Convert(ConvDirective {
+                expr: parse_expr(pair.into_inner()),
+                radix: parse_radix(radix_pair),
+            })
+        }
         _ => unreachable!(),
     }
 }
@@ -135,9 +169,9 @@ lazy_static! {
         use Rule::*;
 
         // This vector passed into PrecClimber defines operator
-        // precedence / priority. a low-order position within the 
-        // vector (position 0, 1, etc) indicates a low priority, 
-        // while a high-order position indicates a high priority. 
+        // precedence / priority. a low-order position within the
+        // vector (position 0, 1, etc) indicates a low priority,
+        // while a high-order position indicates a high priority.
         // The operator in the last position of the vector therefore
         // has the highest priority.
         PrecClimber::new(vec![
@@ -170,6 +204,16 @@ impl Radix {
     }
 }
 
+fn parse_radix(p: Pair<Rule>) -> FormatRadix {
+    match p.as_str() {
+        "dec" => FormatRadix::Decimal,
+        "oct" => FormatRadix::Octal,
+        "hex" => FormatRadix::Hex,
+        "bin" => FormatRadix::Binary,
+        _ => unreachable!(),
+    }
+}
+
 fn parse_num(mut s: &str, radix: Radix) -> Result<i64, ParseIntError> {
     if radix != Radix::Dec {
         s = &s[2..];
@@ -183,10 +227,18 @@ fn parse_expr(expression: Pairs<Rule>) -> Expr {
         expression,
         |pair: Pair<Rule>| match pair.as_rule() {
             Rule::number => parse_expr(pair.into_inner()),
-            Rule::dec => Expr::Num(parse_num(pair.as_str(), Radix::Dec).unwrap()),
-            Rule::hex => Expr::Num(parse_num(pair.as_str(), Radix::Hex).unwrap()),
-            Rule::oct => Expr::Num(parse_num(pair.as_str(), Radix::Oct).unwrap()),
-            Rule::bin => Expr::Num(parse_num(pair.as_str(), Radix::Bin).unwrap()),
+            Rule::dec => {
+                Expr::Num(parse_num(pair.as_str(), Radix::Dec).unwrap())
+            }
+            Rule::hex => {
+                Expr::Num(parse_num(pair.as_str(), Radix::Hex).unwrap())
+            }
+            Rule::oct => {
+                Expr::Num(parse_num(pair.as_str(), Radix::Oct).unwrap())
+            }
+            Rule::bin => {
+                Expr::Num(parse_num(pair.as_str(), Radix::Bin).unwrap())
+            }
             Rule::ans => Expr::Ans,
             Rule::expr => parse_expr(pair.into_inner()),
             _ => unreachable!(),
@@ -236,14 +288,18 @@ pub mod eval {
                     Op::RShift => Ok(left >> right),
                     Op::Div => {
                         if right == 0 {
-                            Err(CorkError::Eval(String::from("Cannot divide by 0")))
+                            Err(CorkError::Eval(String::from(
+                                "Cannot divide by 0",
+                            )))
                         } else {
                             Ok(left / right)
                         }
                     }
                     Op::Rem => {
                         if right == 0 {
-                            Err(CorkError::Eval(String::from("Cannot divide by 0")))
+                            Err(CorkError::Eval(String::from(
+                                "Cannot divide by 0",
+                            )))
                         } else {
                             Ok(left % right)
                         }
@@ -305,7 +361,9 @@ mod test {
         };
         let expr4_str = "6-57*(18+4/73)+38 *  124";
         match parse_line(expr4_str).unwrap() {
-            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 3692),
+            Command::Expr(expr) => {
+                assert_eq!(eval_expr(&expr, 0).unwrap(), 3692)
+            }
             _ => panic!("Should have parsed to an expr"),
         };
         let expr5_str = "2 + (((7 * 2) - 4) / 2) + 8 * 9 / 4";
@@ -330,7 +388,9 @@ mod test {
         };
         let expr9_str = "3 * 512 >> 4 - 2";
         match parse_line(expr9_str).unwrap() {
-            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 384),
+            Command::Expr(expr) => {
+                assert_eq!(eval_expr(&expr, 0).unwrap(), 384)
+            }
             _ => panic!("Should have parsed to an expr"),
         };
         let expr10_str = "3 * (512 >> 4) - 2";
@@ -340,40 +400,259 @@ mod test {
         };
         // testing just the bitwise AND
         let expr11_str = "0b0011 & 0b0110";
-        match parse_line(expr11_str).unwrap(){
-            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0010),
+        match parse_line(expr11_str).unwrap() {
+            Command::Expr(expr) => {
+                assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0010)
+            }
             _ => panic!("Should have parsed to an expr"),
         }
         // testing just the bitwise OR
         let expr12_str = "0b0011 | 0b0110";
-        match parse_line(expr12_str).unwrap(){
-            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0111),
+        match parse_line(expr12_str).unwrap() {
+            Command::Expr(expr) => {
+                assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0111)
+            }
             _ => panic!("Should have parsed to an expr"),
         }
         // testing just the bitwise XOR
         let expr13_str = "0b0011 ^ 0b0101";
-        match parse_line(expr13_str).unwrap(){
-            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0110),
+        match parse_line(expr13_str).unwrap() {
+            Command::Expr(expr) => {
+                assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0110)
+            }
             _ => panic!("Should have parsed to an expr"),
         }
         // testing all of the bitwise operators together
         let expr14_str = "((0b0011 ^ 0b0101) & 0b0011) | 0b0111";
-        match parse_line(expr14_str).unwrap(){
-            Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0111),
+        match parse_line(expr14_str).unwrap() {
+            Command::Expr(expr) => {
+                assert_eq!(eval_expr(&expr, 0).unwrap(), 0b0111)
+            }
             _ => panic!("Should have parsed to an expr"),
         }
         // mixing bitwise and "normal" operators
         let expr15_str = "(((0b0011 ^ 0b0101) * 2) & 0b0101) + 1";
-        match parse_line(expr15_str).unwrap(){
+        match parse_line(expr15_str).unwrap() {
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 5),
             _ => panic!("Should have parsed to an expr"),
         }
         // testing operator precedence / priority with bitwise ops
         let expr16_str = "0b0100 ^ 0b0000 | 0b0101 * 2 & 0b0101 + 1";
-        match parse_line(expr16_str).unwrap(){
+        match parse_line(expr16_str).unwrap() {
             Command::Expr(expr) => assert_eq!(eval_expr(&expr, 0).unwrap(), 6),
             _ => panic!("Should have parsed to an expr"),
         }
+    }
+
+    #[test]
+    fn test_convert_parse() {
+        let conv_str = "(5 + 6) * 2 to hex";
+        let conv1 = ConvDirective {
+            expr: Expr::BinOp(BinOpExpr {
+                left: Box::new(Expr::BinOp(BinOpExpr {
+                    left: Box::new(Expr::Num(5)),
+                    right: Box::new(Expr::Num(6)),
+                    op: Op::Add,
+                })),
+                right: Box::new(Expr::Num(2)),
+                op: Op::Mul,
+            }),
+            radix: FormatRadix::Hex,
+        };
+        assert_eq!(parse_line(conv_str).unwrap(), Command::Convert(conv1));
+
+        let conv2 = ConvDirective {
+            expr: Expr::BinOp(BinOpExpr {
+                left: Box::new(Expr::BinOp(BinOpExpr {
+                    left: Box::new(Expr::Num(5)),
+                    right: Box::new(Expr::Num(6)),
+                    op: Op::Add,
+                })),
+                right: Box::new(Expr::Num(2)),
+                op: Op::Mul,
+            }),
+            radix: FormatRadix::Decimal,
+        };
+        assert_ne!(parse_line(conv_str).unwrap(), Command::Convert(conv2));
+
+        let conv3 = ConvDirective {
+            expr: Expr::BinOp(BinOpExpr {
+                left: Box::new(Expr::BinOp(BinOpExpr {
+                    left: Box::new(Expr::Num(5)),
+                    right: Box::new(Expr::Num(6)),
+                    op: Op::Add,
+                })),
+                right: Box::new(Expr::Num(2)),
+                op: Op::Mul,
+            }),
+            radix: FormatRadix::Octal,
+        };
+        assert_ne!(parse_line(conv_str).unwrap(), Command::Convert(conv3));
+
+        let conv4 = ConvDirective {
+            expr: Expr::BinOp(BinOpExpr {
+                left: Box::new(Expr::BinOp(BinOpExpr {
+                    left: Box::new(Expr::Num(5)),
+                    right: Box::new(Expr::Num(6)),
+                    op: Op::Add,
+                })),
+                right: Box::new(Expr::Num(2)),
+                op: Op::Mul,
+            }),
+            radix: FormatRadix::Binary,
+        };
+        assert_ne!(parse_line(conv_str).unwrap(), Command::Convert(conv4));
+    }
+
+    #[test]
+    fn test_tor_directive_eval() {
+        // Checks invariance for the 'dec' conversion
+        let expr1_str = "(5 + 6) * 2 to dec";
+        match parse_line(expr1_str).unwrap() {
+            Command::Convert(conv) => {
+                assert_eq!(eval_expr(&conv.expr, 0).unwrap(), 22)
+            }
+            _ => panic!("Should have parsed to a conversion"),
+        };
+
+        // Checks invariance for the 'bin' conversion
+        let expr2_str = "(5 + 6) * 2 to bin";
+        match parse_line(expr2_str).unwrap() {
+            Command::Convert(conv) => {
+                assert_eq!(eval_expr(&conv.expr, 0).unwrap(), 22)
+            }
+            _ => panic!("Should have parsed to a conversion"),
+        };
+
+        // Checks invariance for the 'hex' conversion
+        let expr3_str = "(5 + 6) * 2 to hex";
+        match parse_line(expr3_str).unwrap() {
+            Command::Convert(conv) => {
+                assert_eq!(eval_expr(&conv.expr, 0).unwrap(), 22)
+            }
+            _ => panic!("Should have parsed to a conversion"),
+        };
+
+        // Checks invariance for the 'oct' conversion
+        let expr4_str = "(5 + 6) * 2 to oct";
+        match parse_line(expr4_str).unwrap() {
+            Command::Convert(conv) => {
+                assert_eq!(eval_expr(&conv.expr, 0).unwrap(), 22)
+            }
+            _ => panic!("Should have parsed to a conversion"),
+        };
+
+        use pest::error::{Error as PestError, ErrorVariant as PestVariant};
+        use pest::Position;
+
+        let expr5_str = "(5 + 6) * 2 to nonex";
+        let result = parse_line(expr5_str).unwrap_err();
+        let expected = CorkError::Parse(PestError::new_from_pos(
+            PestVariant::ParsingError {
+                positives: vec![Rule::radix],
+                negatives: vec![],
+            },
+            Position::new(expr5_str, 15).unwrap(),
+        ));
+
+        let not_expected = CorkError::Parse(PestError::new_from_pos(
+            PestVariant::ParsingError {
+                positives: vec![Rule::EOI],
+                negatives: vec![],
+            },
+            Position::new(expr5_str, 18).unwrap(),
+        ));
+
+        // Checks error on non-existent radix, must return a wrong radix error
+        assert_eq!(expected, result);
+
+        // Checks error on non-existent radix, must not return an 'expected EOI' error
+        assert_ne!(not_expected, result);
+
+        let expr6_str = "(5 + 6) * 2 to decimal";
+        let result = parse_line(expr6_str).unwrap_err();
+        let expected = CorkError::Parse(PestError::new_from_pos(
+            PestVariant::ParsingError {
+                positives: vec![Rule::EOI],
+                negatives: vec![],
+            },
+            Position::new(expr6_str, 18).unwrap(),
+        ));
+
+        let not_expected = CorkError::Parse(PestError::new_from_pos(
+            PestVariant::ParsingError {
+                positives: vec![Rule::radix],
+                negatives: vec![],
+            },
+            Position::new(expr6_str, 15).unwrap(),
+        ));
+
+        // Checks error on a missing EOI after the radix, must return an 'expected EOI' error
+        assert_eq!(expected, result);
+
+        // Checks error on a missing EOI after the radix, must not return a wrong radix error
+        assert_ne!(not_expected, result);
+    }
+
+    #[test]
+    fn test_convert_output() {
+        use crate::format::OutputFormat;
+
+        let expr_dec = "127 to dec";
+        match parse_line(expr_dec).unwrap() {
+            Command::Convert(conversion) => {
+                let result = format!(
+                    "{:?}",
+                    OutputFormat::default()
+                        .with_format_radix(conversion.radix())
+                        .fmt(conversion.value(0).unwrap())
+                );
+                assert_eq!(result, "\"127\"");
+            }
+            _ => panic!("Should have parsed to a conversion"),
+        };
+
+        let expr_hex = "127 to hex";
+        match parse_line(expr_hex).unwrap() {
+            Command::Convert(conversion) => {
+                let result = format!(
+                    "{:?}",
+                    OutputFormat::default()
+                        .with_format_radix(conversion.radix())
+                        .fmt(conversion.value(0).unwrap())
+                );
+                assert_eq!(result, "\"0x7f\"");
+            }
+            _ => panic!("Should have parsed to a conversion"),
+        };
+
+        let expr_oct = "127 to oct";
+        match parse_line(expr_oct).unwrap() {
+            Command::Convert(conversion) => {
+                let result = format!(
+                    "{:?}",
+                    OutputFormat::default()
+                        .with_format_radix(conversion.radix())
+                        .fmt(conversion.value(0).unwrap())
+                );
+                assert_eq!(result, "\"0o177\"");
+            }
+            _ => panic!("Should have parsed to a conversion"),
+        };
+
+        let expr_bin = "127 to bin";
+        match parse_line(expr_bin).unwrap() {
+            Command::Convert(conversion) => {
+                let result = format!(
+                    "{:?}",
+                    OutputFormat::default()
+                        .with_format_radix(conversion.radix())
+                        .fmt(conversion.value(0).unwrap())
+                );
+                assert_eq!(result, "\"0b1111111\"");
+            }
+            _ => panic!("Should have parsed to a conversion"),
+        };
     }
 
     #[test]
@@ -395,7 +674,10 @@ mod test {
     #[test]
     fn oct_parse() {
         let oct_str1 = "0o345";
-        assert_eq!(parse_line(oct_str1).unwrap(), Command::Expr(Expr::Num(229)));
+        assert_eq!(
+            parse_line(oct_str1).unwrap(),
+            Command::Expr(Expr::Num(229))
+        );
         let oct_str2 = "0o1232344";
         assert_eq!(
             parse_line(oct_str2).unwrap(),
@@ -413,9 +695,15 @@ mod test {
         let bin_str1 = "0b1010";
         assert_eq!(parse_line(bin_str1).unwrap(), Command::Expr(Expr::Num(10)));
         let bin_str1 = "0b10100101";
-        assert_eq!(parse_line(bin_str1).unwrap(), Command::Expr(Expr::Num(165)));
+        assert_eq!(
+            parse_line(bin_str1).unwrap(),
+            Command::Expr(Expr::Num(165))
+        );
         let bin_str3 = "0b10_10_01____01";
-        assert_eq!(parse_line(bin_str3).unwrap(), Command::Expr(Expr::Num(165)));
+        assert_eq!(
+            parse_line(bin_str3).unwrap(),
+            Command::Expr(Expr::Num(165))
+        );
     }
 
     #[test]

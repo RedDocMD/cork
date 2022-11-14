@@ -1,7 +1,7 @@
 use crate::expression::PestRuleError;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum CorkError {
     #[error("couldn't evaluate the expressison: {0}")]
     Eval(String),

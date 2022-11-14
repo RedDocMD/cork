@@ -21,8 +21,11 @@ expr = { term ~ (operation ~ term)* }
 term = _{ ans | number | "(" ~ expr ~ ")" }
 
 set_directive = @{ "set " ~ (word ~ " ")* ~ word }
+tor_directive = { expr ~ "to " ~ radix }
+
+radix = { "dec" | "oct" | "hex" | "bin" }
 word = { (ASCII_ALPHANUMERIC | "-" | "_")+ }
 
-line = { SOI ~ (expr | set_directive) ~ EOI }
+line = { SOI ~ (tor_directive | expr | set_directive) ~ EOI }
 
 WHITESPACE = _{ " " }

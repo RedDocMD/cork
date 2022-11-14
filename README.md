@@ -14,6 +14,7 @@
   - [Usage](#usage)
     - [Numbers](#numbers)
     - [Set directives](#set-directives)
+    - [Temporary format conversion](#temporary-format-conversion)
     - [Inline evaluation](#inline-evaluation)
     - [Script evaluation](#script-evaluation)
     - [Punctuation](#punctuation)
@@ -110,6 +111,40 @@ As of now, Cork has the following keys:
 | Key | Possible Values    | Purpose                |
 | --- | ------------------ | ---------------------- |
 | of  | hex, dec, oct, bin | Sets the output format |
+
+### Temporary format conversion
+
+A `number`, `ans` or the result of an `expression` can be temporary converted to a
+different output format without change the default one. The 'to' command can
+have the forms
+
+```text
+<number> to <radix>
+```
+```text
+ans to <radix>
+```
+```text
+<expression> to <radix>
+```
+
+Supported output formats are:
+
+| Possible Formats   |
+| ------------------ |
+| hex, dec, oct, bin |
+
+Example:
+
+```text
+cork> 0xCAFE to dec
+51966
+cork> 0xCAFE + 2 * 8 * 0x20 to bin
+0b1100110011111110
+cork> ans to hex
+0xccfe
+cork>
+```
 
 ### Inline evaluation
 
