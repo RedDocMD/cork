@@ -1,6 +1,6 @@
 [package]
 name = "cork"
-version = "0.2.5"
+version = "0.2.6"
 authors = ["Deep Majumder <deep.majumder2019@gmail.com>"]
 edition = "2021"
 description = "A command-line calculator for hex-lovers."
