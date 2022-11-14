@@ -85,7 +85,7 @@ pub fn read_config<T: AsRef<Path>>(user_path: Option<T>) -> AResult<Config> {
         }
     }
     if content.is_empty() {
-        content = String::from("[]")
+        content = String::from("")
     }
     let config = serde_yaml::from_str(&content)?;
     Ok(config)
@@ -127,7 +127,7 @@ output_radix: Octal";
 
     #[test]
     fn test_config_deserialize_empty() {
-        let config_str = "[]";
+        let config_str = "";
         let config: Config = serde_yaml::from_str(config_str).unwrap();
         let expected_config = Config {
             prompt: default_prompt(),

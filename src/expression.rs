@@ -1,7 +1,8 @@
 use crate::error::CorkError;
 use crate::format::FormatRadix;
+use once_cell::sync::Lazy;
 use pest::iterators::{Pair, Pairs};
-use pest::prec_climber::PrecClimber;
+use pest::pratt_parser::PrattParser;
 use pest::Parser;
 use pest_derive::Parser;
 use std::fmt;
@@ -75,9 +76,7 @@ pub struct BinOpExpr {
 
 impl PartialEq for BinOpExpr {
     fn eq(&self, rhs: &Self) -> bool {
-        *self.left == *rhs.left
-            && *self.right == *rhs.right
-            && self.op == rhs.op
+        *self.left == *rhs.left && *self.right == *rhs.right && self.op == rhs.op
     }
 }
 
@@ -152,9 +151,11 @@ fn parse_comm(pair: Pair<Rule>) -> Command {
             args: pair.as_str().split(' ').skip(1).map(String::from).collect(),
         }),
         Rule::tor_directive => {
-            let radix_pair = pair.clone().into_inner().last().unwrap();
+            let mut pairs = pair.into_inner();
+            let expr_pair = pairs.next().unwrap();
+            let radix_pair = pairs.next().unwrap();
             Command::Convert(ConvDirective {
-                expr: parse_expr(pair.into_inner()),
+                expr: parse_expr(expr_pair.into_inner()),
                 radix: parse_radix(radix_pair),
             })
         }
@@ -162,28 +163,21 @@ fn parse_comm(pair: Pair<Rule>) -> Command {
     }
 }
 
-lazy_static! {
-    static ref PREC_CLIMBER: PrecClimber<Rule> = {
-        use pest::prec_climber::Assoc::*;
-        use pest::prec_climber::*;
-        use Rule::*;
+static PRATT_PARSER: Lazy<PrattParser<Rule>> = Lazy::new(|| {
+    use pest::pratt_parser::{Assoc::*, Op};
+    use Rule::*;
 
-        // This vector passed into PrecClimber defines operator
-        // precedence / priority. a low-order position within the
-        // vector (position 0, 1, etc) indicates a low priority,
-        // while a high-order position indicates a high priority.
-        // The operator in the last position of the vector therefore
-        // has the highest priority.
-        PrecClimber::new(vec![
-            Operator::new(or, Left),
-            Operator::new(xor, Left),
-            Operator::new(and, Left),
-            Operator::new(lshift, Left) | Operator::new(rshift, Left),
-            Operator::new(add, Left) | Operator::new(subtract, Left),
-            Operator::new(multiply, Left) | Operator::new(divide, Left) | Operator::new(rem, Left),
-        ])
-    };
-}
+    // The operators are defined in an increasing order of precedence
+    // Operators at the same level have same precedence
+    // The "Left" indicates that the operators associate to the left
+    PrattParser::new()
+        .op(Op::infix(or, Left))
+        .op(Op::infix(xor, Left))
+        .op(Op::infix(and, Left))
+        .op(Op::infix(lshift, Left) | Op::infix(rshift, Left))
+        .op(Op::infix(add, Left) | Op::infix(subtract, Left))
+        .op(Op::infix(multiply, Left) | Op::infix(divide, Left) | Op::infix(rem, Left))
+});
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Radix {
@@ -223,29 +217,19 @@ fn parse_num(mut s: &str, radix: Radix) -> Result<i64, ParseIntError> {
 }
 
 fn parse_expr(expression: Pairs<Rule>) -> Expr {
-    PREC_CLIMBER.climb(
-        expression,
-        |pair: Pair<Rule>| match pair.as_rule() {
-            Rule::number => parse_expr(pair.into_inner()),
-            Rule::dec => {
-                Expr::Num(parse_num(pair.as_str(), Radix::Dec).unwrap())
-            }
-            Rule::hex => {
-                Expr::Num(parse_num(pair.as_str(), Radix::Hex).unwrap())
-            }
-            Rule::oct => {
-                Expr::Num(parse_num(pair.as_str(), Radix::Oct).unwrap())
-            }
-            Rule::bin => {
-                Expr::Num(parse_num(pair.as_str(), Radix::Bin).unwrap())
-            }
+    PRATT_PARSER
+        .map_primary(|primary| match primary.as_rule() {
+            Rule::number => parse_expr(primary.into_inner()),
+            Rule::dec => Expr::Num(parse_num(primary.as_str(), Radix::Dec).unwrap()),
+            Rule::hex => Expr::Num(parse_num(primary.as_str(), Radix::Hex).unwrap()),
+            Rule::oct => Expr::Num(parse_num(primary.as_str(), Radix::Oct).unwrap()),
+            Rule::bin => Expr::Num(parse_num(primary.as_str(), Radix::Bin).unwrap()),
             Rule::ans => Expr::Ans,
-            Rule::expr => parse_expr(pair.into_inner()),
-            _ => unreachable!(),
-        },
-        |lhs: Expr, op: Pair<Rule>, rhs: Expr| {
+            Rule::expr => parse_expr(primary.into_inner()),
+            rule => unreachable!("parse_expr expected atom, found {:?}", rule),
+        })
+        .map_infix(|lhs, op, rhs| {
             let op = match op.as_rule() {
-                // note that order does not matter here
                 Rule::add => Op::Add,
                 Rule::subtract => Op::Sub,
                 Rule::multiply => Op::Mul,
@@ -256,15 +240,15 @@ fn parse_expr(expression: Pairs<Rule>) -> Expr {
                 Rule::xor => Op::Xor,
                 Rule::lshift => Op::LShift,
                 Rule::rshift => Op::RShift,
-                _ => unreachable!(),
+                rule => unreachable!("expected operator rule, found {:?}", rule),
             };
             Expr::BinOp(BinOpExpr {
                 left: Box::new(lhs),
                 right: Box::new(rhs),
                 op,
             })
-        },
-    )
+        })
+        .parse(expression)
 }
 
 pub mod eval {
@@ -288,18 +272,14 @@ pub mod eval {
                     Op::RShift => Ok(left >> right),
                     Op::Div => {
                         if right == 0 {
-                            Err(CorkError::Eval(String::from(
-                                "Cannot divide by 0",
-                            )))
+                            Err(CorkError::Eval(String::from("Cannot divide by 0")))
                         } else {
                             Ok(left / right)
                         }
                     }
                     Op::Rem => {
                         if right == 0 {
-                            Err(CorkError::Eval(String::from(
-                                "Cannot divide by 0",
-                            )))
+                            Err(CorkError::Eval(String::from("Cannot divide by 0")))
                         } else {
                             Ok(left % right)
                         }
@@ -674,10 +654,7 @@ mod test {
     #[test]
     fn oct_parse() {
         let oct_str1 = "0o345";
-        assert_eq!(
-            parse_line(oct_str1).unwrap(),
-            Command::Expr(Expr::Num(229))
-        );
+        assert_eq!(parse_line(oct_str1).unwrap(), Command::Expr(Expr::Num(229)));
         let oct_str2 = "0o1232344";
         assert_eq!(
             parse_line(oct_str2).unwrap(),
@@ -695,15 +672,9 @@ mod test {
         let bin_str1 = "0b1010";
         assert_eq!(parse_line(bin_str1).unwrap(), Command::Expr(Expr::Num(10)));
         let bin_str1 = "0b10100101";
-        assert_eq!(
-            parse_line(bin_str1).unwrap(),
-            Command::Expr(Expr::Num(165))
-        );
+        assert_eq!(parse_line(bin_str1).unwrap(), Command::Expr(Expr::Num(165)));
         let bin_str3 = "0b10_10_01____01";
-        assert_eq!(
-            parse_line(bin_str3).unwrap(),
-            Command::Expr(Expr::Num(165))
-        );
+        assert_eq!(parse_line(bin_str3).unwrap(), Command::Expr(Expr::Num(165)));
     }
 
     #[test]

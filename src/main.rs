@@ -14,9 +14,6 @@ use crate::{
     options::Options,
 };
 
-#[macro_use]
-extern crate lazy_static;
-
 mod config;
 mod error;
 mod expression;
@@ -119,13 +116,15 @@ fn inline_evaluate(expr_str: &str, config: &Config, options: &Options) {
             expression::Command::Set(_) => {
                 eprintln!("Set directive not allowed in inline-expression");
                 exit(1);
-            },
+            }
             expression::Command::Convert(conversion) => match conversion.value(0) {
                 Ok(ans) => {
-                    println!("{}", OutputFormat::default()
-                        .with_format_radix(conversion.radix())
-                        .with_punctuate_number(*config.punctuate_output())
-                        .fmt(ans)
+                    println!(
+                        "{}",
+                        OutputFormat::default()
+                            .with_format_radix(conversion.radix())
+                            .with_punctuate_number(*config.punctuate_output())
+                            .fmt(ans)
                     );
                 }
                 Err(err) => {
@@ -149,7 +148,10 @@ fn interactive(config: &Config) {
         welcome();
     }
 
-    let mut rl = Editor::<()>::new();
+    let Ok(mut rl) = Editor::<()>::new() else {
+        eprintln!("Failed to create rustyline editor");
+        exit(1);
+    };
     let history_file_name = PathBuf::from(".cork_history");
     let home_dir = home::home_dir().unwrap_or_else(|| PathBuf::from("."));
     let mut history_path = home_dir;
@@ -224,10 +226,13 @@ fn proccess_command(line: String, ans: &mut i64, of: &mut OutputFormat) -> Resul
         expression::Command::Convert(conversion) => {
             let val = conversion.value(*ans)?;
             *ans = val;
-            println!("{}", OutputFormat::default()
-                .with_format_radix(conversion.radix())
-                .with_punctuate_number(of.punctuate_number())
-                .fmt(val));
+            println!(
+                "{}",
+                OutputFormat::default()
+                    .with_format_radix(conversion.radix())
+                    .with_punctuate_number(of.punctuate_number())
+                    .fmt(val)
+            );
         }
         expression::Command::Empty => println!(),
     };

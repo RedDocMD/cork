@@ -9,7 +9,7 @@ pub struct Options {
         long,
         value_name = "EXPR",
         help = "evaluate <EXPR> and print it",
-        min_values = 1
+        num_args=1..
     )]
     pub expr: Option<Vec<String>>,
 
